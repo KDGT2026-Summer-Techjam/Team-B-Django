@@ -20,8 +20,8 @@
 ## 1. クローン
 
 ```bash
-git clone <リポジトリURL>
-cd <リポジトリ名>
+git clone https://github.com/KDGT2026-Summer-Techjam/Team-B-Django
+cd Team-B-Django
 ```
 
 ---
