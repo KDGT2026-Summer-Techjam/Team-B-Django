@@ -11,7 +11,7 @@
 | --- | --- | --- |
 | Python | 3.11 以上 | `python --version` |
 | Git | 任意 | `git --version` |
-| PostgreSQL | ローカルで動かす場合のみ | `psql --version` |
+| PostgreSQL | 必須（各自のPCにインストール） | `psql --version` |
 
 > Python が `python3` でしか動かない環境（Mac / Linux）では、以下のコマンドの `python` を `python3` に読み替えてください。
 
@@ -62,21 +62,72 @@ pip install -r requirements.txt
 
 ---
 
-## 4. `.env` を置く
+## 4. ローカルPostgreSQLのセットアップ
 
-**`.env` は Git に入っていません。** リーダーから受け取って、リポジトリの直下に置いてください。
+**DBは各自のPCに用意します（リーダーのDBを共有するわけではありません）。** OSに合わせて進めてください。
+
+### Mac（Homebrew）
+
+```bash
+brew install postgresql@15
+brew services start postgresql@15
+createdb techjam_dev
+```
+
+Homebrew版はデフォルトでパスワードなしで自分のOSユーザー名のまま接続できます。
+
+### Windows
+
+1. [公式サイト](https://www.postgresql.org/download/windows/) からインストーラー（EDB版）をダウンロードして実行する
+2. インストール中に **`postgres` ユーザーのパスワードを設定する画面が出るので、必ず控えておく**（後で使います。忘れると詰まります）
+3. Port はデフォルトの `5432` のままでよい
+4. インストール完了後、スタートメニューから **SQL Shell (psql)** を開く
+5. `Server` `Database` `Port` `Username` は Enter で全てデフォルトのままにし、`Password` に手順2で設定したパスワードを入力する
+6. 接続できたら、以下を実行してDBを作成する
+
+   ```sql
+   CREATE DATABASE techjam_dev;
+   ```
+
+7. `\q` で終了する
+
+### Linux（Ubuntu/Debian系）
+
+```bash
+sudo apt install postgresql
+sudo -u postgres createdb techjam_dev
+sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD '任意のパスワード';"
+```
+
+### 動作確認
+
+```bash
+psql -h localhost -U <ユーザー名> -d techjam_dev -c "SELECT 1;"
+```
+
+エラーなく `1` が返れば接続できています。
+
+---
+
+## 5. `.env` を置く
+
+**`.env` は Git に入っていません。** `SECRET_KEY` はリーダーから受け取ってください。`DATABASE_URL` は前の手順で作った**自分のローカルDBの接続情報**を自分で書きます。
 
 ```
 SECRET_KEY=（リーダーから受け取る）
 DEBUG=True
-DATABASE_URL=（リーダーから受け取る）
+DATABASE_URL=postgres://<ユーザー名>:<パスワード>@localhost:5432/techjam_dev
+ALLOWED_HOSTS=127.0.0.1,localhost
 ```
+
+- Mac（Homebrew）でパスワードを設定していない場合は `postgres://<ユーザー名>@localhost:5432/techjam_dev` のように `:<パスワード>` の部分を省略してください
+- Windows / Linux は手順4で設定したパスワードを入れてください
 
 > `.env` は絶対にコミットしないこと。`.gitignore` に入っていることを一度確認してください。
 
 ---
 
-## 5. マイグレーション
+## 6. マイグレーション
 
 ```bash
 python manage.py migrate
@@ -94,7 +145,7 @@ python manage.py migrate
 
 ---
 
-## 6. 起動
+## 7. 起動
 
 ```bash
 python manage.py runserver
@@ -113,7 +164,12 @@ python manage.py runserver
 ### `django.db.utils.OperationalError: could not connect to server`
 
 `DATABASE_URL` が間違っているか、ローカルの PostgreSQL が起動していません。
-まず `.env` の値をリーダーに確認してください。
+Windows は「サービス」アプリで `postgresql-x64-15` が起動しているか確認してください。Macは `brew services list` で `postgresql@15` が `started` になっているか確認してください。
+
+### `FATAL: password authentication failed for user`
+
+`.env` の `DATABASE_URL` に書いたパスワードが、DB作成時に設定したものと違います。手順4で控えたパスワードと見比べてください。
+分からなくなった場合、Windowsは再インストールが一番早いです（アンインストール後、手順4からやり直す）。Mac/Linuxは `ALTER USER` でパスワードを設定し直してください。**自己判断でDBの認証設定ファイル（`pg_hba.conf`）を書き換えるのはリスクが高いので、先に #質問・相談 に投げること。**
 
 ### `ImproperlyConfigured: The SECRET_KEY setting must not be empty`
 
