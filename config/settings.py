@@ -52,10 +52,14 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 
 # Database
-# docs/設計.md 参照。ローカル・本番ともに DATABASE_URL から接続する
+# docs/設計.md 参照。本番（Render）は DATABASE_URL で PostgreSQL に接続する
+# ローカル開発は DATABASE_URL 未設定なら SQLite にフォールバックする
 
 DATABASES = {
-    "default": dj_database_url.config(conn_max_age=600)
+    "default": dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600,
+    )
 }
 
 
