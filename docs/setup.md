@@ -9,11 +9,13 @@
 
 | ツール | バージョン | 確認コマンド |
 | --- | --- | --- |
-| Python | 3.11 以上 | `python --version` |
+| Python | **3.12.4 に統一**（`.python-version` で固定） | `python --version` |
 | Git | 任意 | `git --version` |
 | PostgreSQL | 不要（開発中はSQLiteを使う。任意） | `psql --version` |
 
 > Python が `python3` でしか動かない環境（Mac / Linux）では、以下のコマンドの `python` を `python3` に読み替えてください。
+>
+> **pyenvを使っている場合**、リポジトリ直下に `.python-version` があるので `cd` するだけで自動的に3.12.4に切り替わります。未導入の場合は [pyenv.md](pyenv.md) の手順に沿って導入してください。
 
 ---
 

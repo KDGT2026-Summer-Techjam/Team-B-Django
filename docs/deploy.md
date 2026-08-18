@@ -47,7 +47,7 @@ Render の Environment に以下を設定します。
 | `DEBUG` | `False` | **本番で True にしない** |
 | `DATABASE_URL` | Internal Database URL | Render の DB からコピー |
 | `ALLOWED_HOSTS` | `.onrender.com` | 入れ忘れると全リクエストが 400 |
-| `PYTHON_VERSION` | `3.11.9` | 明示しないと想定外のバージョンが使われる |
+| `PYTHON_VERSION` | `3.12.4` | 明示しないと想定外のバージョンが使われる。開発環境（`.python-version`）と揃える |
 
 `SECRET_KEY` の生成:
 
