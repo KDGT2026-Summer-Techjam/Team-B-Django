@@ -1,0 +1,18 @@
+# 環境変数
+.env
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+*.egg-info/
+
+# Django
+staticfiles/
+*.sqlite3
+
+# OS / エディタ
+.DS_Store
+.vscode/
+.idea/
