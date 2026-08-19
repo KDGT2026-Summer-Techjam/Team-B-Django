@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inby - Edit Card</title>
+    <style>
+        /* 共通設定・リセット */
+        :root {
+            --bg-color: #F8F6F1;
+            --sidebar-color: #8BAE9E;
+            --button-color: #EF8C72;
+            --text-color: #666666;
+            --title-color: #666666;
+            --card-bg: #FFFFFF;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            font-family: sans-serif;
+            color: var(--text-color);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* --- サイドバーのホバーギミック --- */
+        /* 左端の透明なトリガーエリア（ここにカーソルが乗るとサイドバーが出る） */
+        .sidebar-trigger {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 30px;
+            height: 100vh;
+            z-index: 5;
+        }
+
+        /* サイドバー本体 */
+        .sidebar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 180px;
+            height: 100vh;
+            background-color: var(--sidebar-color);
+            transform: translateX(-100%); /* デフォルトは画面外 */
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            color: white;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+        }
+
+        /* トリガーにホバー、またはサイドバー自体にホバーした時に表示 */
+        .sidebar-trigger:hover + .sidebar,
+        .sidebar:hover {
+            transform: translateX(0);
+        }
+
+        .sidebar nav ul {
+            list-style: none;
+        }
+
+        .sidebar nav ul li {
+            margin-bottom: 15px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        /* --- メインコンテンツ（カード） --- */
+        .card-container {
+            width: 800px;
+            height: 500px;
+            background-color: var(--card-bg);
+            border-radius: 40px;
+            border: 1px solid #ddd;
+            padding: 40px 50px;
+            position: relative;
+            z-index: 1; /* サイドバーより下に配置 */
+        }
+
+        /* 完了ボタン */
+        .btn-complete {
+            position: absolute;
+            top: 40px;
+            right: 50px;
+            background-color: var(--button-color);
+            color: white;
+            border: none;
+            padding: 8px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        /* カード内のレイアウト */
+        .card-content {
+            display: flex;
+            margin-top: 20px;
+            height: 100%;
+        }
+
+        .text-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .image-section {
+            width: 320px;
+            height: 320px;
+            background-color: #EEEEEE;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .image-section svg {
+            width: 80px;
+            height: 80px;
+            fill: #888888;
+        }
+
+        /* --- 入力フォームのスタイリング --- */
+        input, textarea {
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            color: inherit;
+            outline: none;
+        }
+
+        /* プレースホルダーの色も合わせる */
+        input::placeholder, textarea::placeholder {
+            color: #999;
+        }
+
+        /* ホバー・フォーカス時に薄く背景色をつけて入力可能であることを示す */
+        input:hover, textarea:hover,
+        input:focus, textarea:focus {
+            background-color: rgba(0, 0, 0, 0.03);
+            border-radius: 4px;
+        }
+
+        /* 各入力欄の個別フォントサイズ調整 */
+        .input-title {
+            font-size: 52px;
+            font-weight: normal;
+            color: var(--title-color);
+            margin-bottom: 10px;
+            width: 100%;
+            height: 70px;
+        }
+
+        .input-date, .input-time, .input-location, .input-author {
+            font-size: 18px;
+            width: 80%;
+            padding: 4px;
+        }
+
+        .members-area {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .members-area span {
+            font-size: 18px;
+            padding: 4px;
+        }
+
+        .input-members {
+            font-size: 14px;
+            resize: none;
+            width: 80%;
+            height: 60px;
+            padding: 4px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- サイドバー表示用のトリガー -->
+    <div class="sidebar-trigger"></div>
+
+    <!-- サイドバー -->
+    <aside class="sidebar">
+        <nav>
+            <ul>
+                <li>👁 home</li>
+                <li>✉ create</li>
+                <li>♥ my card</li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- メインのカードエリア -->
+    <div class="card-container">
+        <button class="btn-complete">完了</button>
+
+        <div class="card-content">
+            <!-- 左側のテキスト入力エリア -->
+            <div class="text-section">
+                <input type="text" class="input-title" placeholder="タイトル">
+                
+                <input type="text" class="input-date" placeholder="YYYY/MM/DD">
+                <input type="text" class="input-time" placeholder="時間">
+                
+                <div style="margin-top: 10px;"></div> <!-- 少しの余白 -->
+                
+                <input type="text" class="input-location" placeholder="場所">
+                <input type="text" class="input-author" placeholder="投稿者">
+
+                <div class="members-area">
+                    <span>メンバー</span>
+                    <textarea class="input-members" placeholder="・名前&#10;・名前"></textarea>
+                </div>
+            </div>
+
+            <!-- 右側の画像エリア -->
+            <div class="image-section">
+                <!-- 画像アイコンのSVG -->
+                <svg viewBox="0 0 24 24">
+                    <path d="M19,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3M19,19H5V5H19V19M13.96,12.29L11.21,15.83L9.25,13.47L6.5,17H17.5L13.96,12.29Z" />
+                </svg>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

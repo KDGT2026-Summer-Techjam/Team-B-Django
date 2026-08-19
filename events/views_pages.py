@@ -5,8 +5,8 @@ def home(request):
     return render(request, "events/home.html")
 
 
-def new_event(request):
-    return render(request, "events/new_event.html")
+def edit(request):
+    return render(request, "events/edit.html")
 
 
 def event_page(request, public_id):
