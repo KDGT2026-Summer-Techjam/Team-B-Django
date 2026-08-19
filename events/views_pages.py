@@ -13,5 +13,5 @@ def event_page(request, public_id):
     return render(request, "events/event_page.html", {"public_id": public_id})
 
 
-def event_done(request, public_id):
-    return render(request, "events/event_done.html", {"public_id": public_id})
+def post(request):#public_idテストのため一時的に削除
+    return render(request, "events/post.html")#, {"public_id": public_id}テストのため一時的に削除

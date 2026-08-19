@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投稿完了</title>
+    <style>
+        /* リセットと基本設定 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+        }
+
+        body {
+            background-color: #F9F7F1; /* 背景色（クリーム系） */
+            color: #333;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ヘッダー部分 */
+        header {
+            padding: 20px 30px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 10;
+        }
+
+        .header-title {
+            color: #BDBDBD;
+            font-size: 18px;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        /* --- サイドバーのホバーギミック --- */
+        /* 左端の透明なトリガーエリア（ここにカーソルが乗るとサイドバーが出る） */
+        .sidebar-trigger {
+            position: fixed; /* 画面に固定 */
+            top: 0;
+            left: 0;
+            width: 30px; /* 当たり判定の幅 */
+            height: 100vh;
+            z-index: 90;
+        }
+
+        /* サイドバー本体 */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 250px;
+            height: 100vh;
+            background-color: #8AB69B; /* サイドバーの緑色 */
+            transform: translateX(-100%); /* デフォルトは左側の画面外に隠す */
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* スライドするアニメーションの速度と滑らかさ */
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
+        }
+
+        /* トリガーにホバー、またはサイドバー自体にホバーした時に表示 */
+        .sidebar-trigger:hover + .sidebar,
+        .sidebar:hover {
+            transform: translateX(0); /* 画面内の元の位置に戻す */
+        }
+
+        .menu {
+            list-style: none;
+            width: 100%;
+            padding-left: 30px;
+        }
+
+        .menu li {
+            margin-bottom: 25px;
+            color: white;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .menu li:hover {
+            opacity: 0.7;
+        }
+
+        .menu li svg {
+            width: 20px;
+            height: 20px;
+            margin-right: 15px;
+            fill: white;
+        }
+
+        /* メインコンテンツ（中央配置） */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            font-size: 28px;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        /* カードとアイコンのコンテナ */
+        .card-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        /* カードのプレビュー（真ん中の四角） */
+        .card-preview {
+            width: 450px;
+            height: 260px;
+            background-color: white;
+            border: 1.5px solid #333;
+            border-radius: 20px;
+            margin-bottom: 15px;
+        }
+
+        /* アクションアイコン */
+        .action-icons {
+            display: flex;
+            gap: 15px;
+            padding-right: 5px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .icon-btn svg {
+            width: 26px;
+            height: 26px;
+            stroke: #333;
+            stroke-width: 2;
+            fill: none;
+            transition: stroke 0.2s;
+        }
+
+        .icon-btn:hover svg {
+            stroke: #EC8A76;
+        }
+
+        /* 戻るボタン */
+        .return-btn-container {
+            position: absolute;
+            bottom: 50px;
+            right: 50px;
+        }
+
+        .return-btn {
+            background-color: #EC8A76; /* ボタンのオレンジ系色 */
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 30px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .return-btn:hover {
+            background-color: #d97864;
+        }
+
+        .return-btn:active {
+            transform: scale(0.95);
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- ヘッダー -->
+    <header>
+        <div class="header-title">post</div>
+    </header>
+
+    <!-- サイドバー表示用のトリガー -->
+    <div class="sidebar-trigger"></div>
+
+    <!-- サイドバー -->
+    <aside class="sidebar">
+        <ul class="menu">
+            <li>
+                <!-- Home Icon SVG -->
+                <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                home
+            </li>
+            <li>
+                <!-- Create Icon SVG -->
+                <svg viewBox="0 0 24 24"><path d="M4 4h16v2H4zm0 6h16v2H4zm0 6h16v2H4z"/></svg>
+                create
+            </li>
+            <li>
+                <!-- Heart Icon SVG -->
+                <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                my card
+            </li>
+        </ul>
+    </aside>
+
+    <!-- メインコンテンツ -->
+    <div class="main-content">
+        <h1>カードが投稿されました！</h1>
+        <p class="subtitle">シェアして友達を誘おう</p>
+        
+        <div class="card-container">
+            <div class="card-preview">
+                <!-- ここに作成されたカードの内容が入ります -->
+            </div>
+            
+            <div class="action-icons">
+                <!-- コピーアイコン -->
+                <button class="icon-btn" title="コピー">
+                    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                </button>
+                <!-- シェアアイコン -->
+                <button class="icon-btn" title="シェア">
+                    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="18" cy="5" r="3"></circle>
+                        <circle cx="6" cy="12" r="3"></circle>
+                        <circle cx="18" cy="19" r="3"></circle>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 戻るボタン -->
+    <div class="return-btn-container">
+        <button class="return-btn">戻る</button>
+    </div>
+
+</body>
+</html>
