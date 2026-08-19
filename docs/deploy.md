@@ -9,9 +9,9 @@
 
 | 項目 | 値 |
 | --- | --- |
-| 本番URL | https://（ここを埋める）.onrender.com |
-| Render サービス名 | （ここを埋める） |
-| DB名 | （ここを埋める） |
+| 本番URL | https://seasonhub-web.onrender.com |
+| Render サービス名 | seasonhub-web |
+| DB名 | seasonhub-db |
 | リージョン | Singapore |
 
 ---

@@ -1,4 +1,6 @@
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
+
+from .models import Event
 
 
 def home(request):
@@ -10,8 +12,21 @@ def new_event(request):
 
 
 def event_page(request, public_id):
+    get_object_or_404(Event, public_id=public_id)
     return render(request, "events/event_page.html", {"public_id": public_id})
 
 
 def event_done(request, public_id):
     return render(request, "events/event_done.html", {"public_id": public_id})
+
+
+def my_events_list(request):
+    return render(request, "events/my_events.html")
+
+
+def event_edit(request, public_id):
+    return render(request, "events/event_edit.html", {"public_id": public_id})
+
+
+def error_page(request, exception):
+    return render(request, "events/error.html", status=404)
