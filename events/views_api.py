@@ -1,16 +1,56 @@
-from django.http import JsonResponse, HttpResponseNotAllowed
+import json
+
+from django.http import HttpResponseNotAllowed, JsonResponse
+from django.utils.dateparse import parse_date
+
+from .models import Event
 
 
 def create_event(request):
-    """POST /api/events のダミー実装。固定値を返すのみで、DBには書き込まない。"""
+    """イベントを作成し、共有に必要な情報を返す。"""
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
 
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"error": "リクエストが不正です"}, status=400)
+
+    required_fields = ("title", "event_date", "location", "organizer_name")
+    if not isinstance(data, dict) or any(field not in data for field in required_fields):
+        return JsonResponse({"error": "必須項目を入力してください"}, status=400)
+
+    if not isinstance(data["organizer_name"], str) or not data["organizer_name"].strip():
+        return JsonResponse({"error": "投稿者名を入力してください"}, status=400)
+
+    if not all(
+        isinstance(data[field], str) and data[field].strip()
+        for field in ("title", "location")
+    ):
+        return JsonResponse({"error": "必須項目を入力してください"}, status=400)
+
+    if not isinstance(data["event_date"], str):
+        return JsonResponse({"error": "日付が不正です"}, status=400)
+
+    try:
+        event_date = parse_date(data["event_date"])
+    except ValueError:
+        return JsonResponse({"error": "日付が不正です"}, status=400)
+    if event_date is None or event_date.isoformat() != data["event_date"]:
+        return JsonResponse({"error": "日付が不正です"}, status=400)
+
+    event = Event.objects.create(
+        title=data["title"].strip(),
+        event_date=event_date,
+        location=data["location"].strip(),
+        organizer_name=data["organizer_name"].strip(),
+    )
+
     return JsonResponse(
         {
-            "public_id": "a7k2m9",
-            "edit_token": "dummy-edit-token",
-            "url": "http://127.0.0.1:8000/e/a7k2m9",
+            "public_id": event.public_id,
+            "edit_token": event.edit_token,
+            "url": request.build_absolute_uri(f"/e/{event.public_id}"),
         },
         status=201,
     )
