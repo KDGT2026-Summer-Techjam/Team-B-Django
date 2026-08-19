@@ -180,12 +180,12 @@ Windows は「サービス」アプリで `postgresql-x64-15` が起動してい
 ## 作業の始め方
 
 ```bash
-git switch main
+git switch develop
 git pull
 git switch -c feature/機能名
 ```
 
 - `main` に直接 Push しない
-- 作業は `feature/機能名` ブランチ
-- Pull Request → レビュー → マージ
+- 作業は `develop` から切った `feature/機能名` ブランチ
+- Pull Request（ベースは `develop`） → レビュー → マージ
 - 担当ファイルは分かれているので、**自分の担当外のファイルは触らない**（コンフリクト防止）
