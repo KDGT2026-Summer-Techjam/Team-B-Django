@@ -16,6 +16,21 @@
 
 ---
 
+## 0. Blueprint（render.yaml）を使ったデプロイ（推奨）
+
+リポジトリ直下の `render.yaml` に Web Service（`seasonhub-web`）と PostgreSQL（`seasonhub-db`）の設定を定義済みです。
+Render ダッシュボードで以下を行うだけで、Build/Start Command・環境変数（`SECRET_KEY` の生成含む）・DB接続がすべて自動設定されます。
+
+1. Render ダッシュボード → **New** → **Blueprint**
+2. このリポジトリを選択（GitHub 連携が必要）
+3. `render.yaml` の内容が読み込まれるので、内容を確認して **Apply**
+4. 初回デプロイが完了したら、本番URLをこのファイルと `README.md` に追記する
+
+`render.yaml` を変更した場合は、Render ダッシュボードで再度 Blueprint を反映（Sync）してください。
+以下の「1. Render 側の設定」以降は、Blueprint を使わず手動でセットアップする場合の手順です。
+
+---
+
 ## 1. Render 側の設定
 
 ### Web Service
