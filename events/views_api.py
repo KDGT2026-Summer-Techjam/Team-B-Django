@@ -5,6 +5,8 @@ from django.utils.dateparse import parse_date
 
 from .models import Event
 
+from .models import Event
+
 
 def create_event(request):
     """イベントを作成し、共有に必要な情報を返す。"""
@@ -61,4 +63,31 @@ def create_event(request):
             "url": request.build_absolute_uri(f"/e/{event.public_id}"),
         },
         status=201,
+    )
+
+
+def get_event(request, public_id):
+    """公開IDに対応するイベント情報と参加者一覧を返す。"""
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    try:
+        event = Event.objects.get(public_id=public_id)
+    except Event.DoesNotExist:
+        return JsonResponse({"error": "イベントが見つかりません"}, status=404)
+
+    participants = [
+        {"id": participant.id, "name": participant.name}
+        for participant in event.participants.order_by("created_at", "id")
+    ]
+
+    return JsonResponse(
+        {
+            "public_id": event.public_id,
+            "title": event.title,
+            "event_date": event.event_date.isoformat(),
+            "location": event.location,
+            "organizer_name": event.organizer_name,
+            "participants": participants,
+        }
     )

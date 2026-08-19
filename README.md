@@ -5,7 +5,7 @@
 **イベントの誘いを共有URLつきで作成し、受け取った人が参加ボタンを押すだけで意思表示できる。**
 インストール不要・アカウント登録不要。リンクを開くだけで使えます。
 
-- 本番URL: https://（ここを埋める）.onrender.com
+- 本番URL: https://seasonhub-web.onrender.com
 - 開発期間: 2026年8月18日 〜 8月28日（Techjam 2026夏）
 
 ---
@@ -70,6 +70,7 @@ python manage.py runserver
 | [docs/開発計画.md](docs/開発計画.md) | スケジュール・体制・開発ルール・完成条件 |
 | [docs/setup.md](docs/setup.md) | 環境構築手順 |
 | [docs/deploy.md](docs/deploy.md) | デプロイ手順（Render） |
+| [docs/pr-guide.md](docs/pr-guide.md) | PR作成手順書 |
 
 ---
 
@@ -77,9 +78,9 @@ python manage.py runserver
 
 | 役割 | 人数 | 担当者 |
 | --- | --- | --- |
-| PM / デプロイ | 1 | （ここを埋める） |
-| フロントエンド | 2 | （ここを埋める） |
-| バックエンド | 3 | （ここを埋める） |
+| PM / デプロイ | 1 | @Karuhito |
+| フロントエンド | 2 | @amano02 @jinki827 |
+| バックエンド | 3 | @Kazuma-0530 @rs0325 @mudesu |
 
 ---
 
