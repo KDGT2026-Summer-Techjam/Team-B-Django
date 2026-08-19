@@ -29,6 +29,14 @@ def create_event(request):
     ):
         return JsonResponse({"error": "必須項目を入力してください"}, status=400)
 
+    text_fields = ("title", "location", "organizer_name")
+    cleaned_data = {field: data[field].strip() for field in text_fields}
+    if any(
+        len(cleaned_data[field]) > Event._meta.get_field(field).max_length
+        for field in text_fields
+    ):
+        return JsonResponse({"error": "入力が長すぎます"}, status=400)
+
     if not isinstance(data["event_date"], str):
         return JsonResponse({"error": "日付が不正です"}, status=400)
 
@@ -40,10 +48,10 @@ def create_event(request):
         return JsonResponse({"error": "日付が不正です"}, status=400)
 
     event = Event.objects.create(
-        title=data["title"].strip(),
+        title=cleaned_data["title"],
         event_date=event_date,
-        location=data["location"].strip(),
-        organizer_name=data["organizer_name"].strip(),
+        location=cleaned_data["location"],
+        organizer_name=cleaned_data["organizer_name"],
     )
 
     return JsonResponse(

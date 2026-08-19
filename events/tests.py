@@ -75,3 +75,26 @@ class CreateEventTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("error", response.json())
         self.assertFalse(Event.objects.exists())
+
+    def test_text_field_over_max_length_returns_400_without_saving(self):
+        for field in ("title", "location", "organizer_name"):
+            with self.subTest(field=field):
+                max_length = Event._meta.get_field(field).max_length
+                payload = {**self.payload, field: "あ" * (max_length + 1)}
+
+                response = self.post(payload)
+
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json(), {"error": "入力が長すぎます"})
+                self.assertFalse(Event.objects.exists())
+
+    def test_text_field_at_max_length_returns_201(self):
+        for field in ("title", "location", "organizer_name"):
+            with self.subTest(field=field):
+                max_length = Event._meta.get_field(field).max_length
+                payload = {**self.payload, field: "あ" * max_length}
+
+                response = self.post(payload)
+
+                self.assertEqual(response.status_code, 201)
+                Event.objects.all().delete()
