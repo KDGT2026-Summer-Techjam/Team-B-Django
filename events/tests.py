@@ -151,6 +151,58 @@ class GetEventTests(TestCase):
         self.assertEqual(response.headers["Allow"], "GET")
 
 
+class EventPageTests(TestCase):
+    def setUp(self):
+        self.event = Event.objects.create(
+            title="長岡花火大会",
+            event_date="2026-08-22",
+            location="新潟県長岡市",
+            organizer_name="田中",
+        )
+
+    def test_event_page_context_marks_matching_visitor_as_participant(self):
+        self.client.cookies["visitor_id"] = "visitor-a"
+        Participant.objects.create(
+            event=self.event,
+            name="山田",
+            visitor_id="visitor-a",
+        )
+
+        response = self.client.get(f"/e/{self.event.public_id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["public_id"], self.event.public_id)
+        self.assertEqual(response.context["event"], self.event)
+        self.assertIs(response.context["is_participant"], True)
+        self.assertNotIn("participants", response.context)
+
+    def test_event_page_marks_visitor_without_participant_as_false(self):
+        self.client.cookies["visitor_id"] = "visitor-a"
+
+        response = self.client.get(f"/e/{self.event.public_id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIs(response.context["is_participant"], False)
+
+    def test_event_page_marks_different_participant_visitor_as_false(self):
+        self.client.cookies["visitor_id"] = "visitor-a"
+        Participant.objects.create(
+            event=self.event,
+            name="佐藤",
+            visitor_id="visitor-b",
+        )
+
+        response = self.client.get(f"/e/{self.event.public_id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIs(response.context["is_participant"], False)
+
+    def test_event_page_returns_404_for_unknown_public_id(self):
+        response = self.client.get("/e/zzzzzz/")
+
+        self.assertEqual(response.status_code, 404)
+
+
 class JoinEventTests(TestCase):
     def setUp(self):
         self.event = Event.objects.create(
