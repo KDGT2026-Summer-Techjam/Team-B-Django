@@ -31,6 +31,7 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "events.middleware.VisitorIdMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"

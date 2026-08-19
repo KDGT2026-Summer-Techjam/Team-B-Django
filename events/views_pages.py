@@ -15,3 +15,11 @@ def event_page(request, public_id):
 
 def event_done(request, public_id):
     return render(request, "events/event_done.html", {"public_id": public_id})
+
+
+def my_events_list(request):
+    return render(request, "events/my_events.html")
+
+
+def event_edit(request, public_id):
+    return render(request, "events/event_edit.html", {"public_id": public_id})

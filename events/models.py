@@ -23,6 +23,7 @@ class Event(models.Model):
     location = models.CharField(max_length=255)
     organizer_name = models.CharField(max_length=255)
     edit_token = models.CharField(max_length=64, default=generate_edit_token)
+    creator_visitor_id = models.CharField(max_length=64, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
@@ -32,6 +33,7 @@ class Event(models.Model):
 class Participant(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="participants")
     name = models.CharField(max_length=255)
+    visitor_id = models.CharField(max_length=64, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
