@@ -29,4 +29,4 @@ def event_edit(request, public_id):
 
 
 def error_page(request, exception):
-    return render(request, "events/error.html")
+    return render(request, "events/error.html", status=404)
