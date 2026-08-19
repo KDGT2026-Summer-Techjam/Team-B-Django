@@ -4,19 +4,20 @@
 
 ## ブランチ運用ルール
 
-- `main`ブランチへの直接pushは禁止です。必ずブランチを切って作業してください。
-- ブランチ名は `feature/xxx`（機能追加）、`fix/xxx`（バグ修正）のように、内容がわかる名前をつけてください。
+- `main`ブランチ: 本番相当。Renderの本番デプロイはこのブランチを見ています。常にデプロイ可能な状態を保つため、直接pushは禁止です。
+- `develop`ブランチ: 開発統合ブランチ。featureはここから分岐し、ここへマージします。
+- `feature/xxx`（機能追加）、`fix/xxx`（バグ修正）のように、内容がわかる名前をつけてください。
 - 1つのブランチ・1つのPRには、1つの関係する変更のみを含めてください。
 
 ## 1. 作業開始前の準備
 
 ```bash
-git checkout main
-git pull origin main
+git checkout develop
+git pull origin develop
 git checkout -b feature/xxx
 ```
 
-- 必ず最新の`main`から分岐してください。
+- 必ず最新の`develop`から分岐してください。
 - 既に作業中のブランチがある場合は、作業前に`git status`で状態を確認してください。
 
 ## 2. 実装・コミット
@@ -77,21 +78,30 @@ EOF
 
 ## 5. レビュー〜マージ
 
-1. PR作成後、チームメンバーにレビューを依頼します。
+1. PR作成後、チームメンバーにレビューを依頼します。PRのベースブランチは`develop`にしてください。
 2. レビューコメントに対応し、必要な修正を追加コミットで反映します（`git commit --amend`は使わず、新規コミットを積み重ねます）。
 3. レビューが承認されたら、GitHub上でマージします（Squash and mergeを推奨）。
 4. マージ後、不要になったブランチを削除します。
 
 ```bash
-git checkout main
-git pull origin main
+git checkout develop
+git pull origin develop
 git branch -d feature/xxx
+```
+
+## 6. developからmainへのリリース
+
+`develop`である程度機能がまとまったタイミングで、`develop`→`main`のPRを作成します。これがそのまま本番（Render）へのデプロイトリガーになるため、マージ前に動作確認を徹底してください。
+
+```bash
+gh pr create --base main --head develop --title "リリース: <内容>"
 ```
 
 ## チェックリスト（PR作成前の最終確認）
 
-- [ ] `main`から最新の状態で分岐しているか
+- [ ] `develop`から最新の状態で分岐しているか
 - [ ] 1つのPRに関係のない変更が混在していないか
 - [ ] テストが存在する場合、テストを実行し通過しているか
 - [ ] 秘匿情報を含むファイルをコミットしていないか
 - [ ] PR本文に概要・変更内容・動作確認リストを記載したか
+- [ ] PRのベースブランチが`develop`になっているか（リリースPRのみ`main`）
