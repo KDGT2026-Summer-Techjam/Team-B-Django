@@ -70,6 +70,7 @@ python manage.py runserver
 | [docs/開発計画.md](docs/開発計画.md) | スケジュール・体制・開発ルール・完成条件 |
 | [docs/setup.md](docs/setup.md) | 環境構築手順 |
 | [docs/deploy.md](docs/deploy.md) | デプロイ手順（Render） |
+| [docs/pr-guide.md](docs/pr-guide.md) | PR作成手順書 |
 
 ---
 
