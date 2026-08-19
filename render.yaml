@@ -1,0 +1,26 @@
+databases:
+  - name: seasonhub-db
+    plan: free
+    region: singapore
+
+services:
+  - type: web
+    name: seasonhub-web
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
+    startCommand: "gunicorn config.wsgi:application"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.4
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: .onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: seasonhub-db
+          property: connectionString
