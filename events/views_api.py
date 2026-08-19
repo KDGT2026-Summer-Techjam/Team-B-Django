@@ -3,9 +3,7 @@ import json
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.utils.dateparse import parse_date
 
-from .models import Event
-
-from .models import Event
+from .models import Event, Participant
 
 
 def create_event(request):
@@ -90,4 +88,53 @@ def get_event(request, public_id):
             "organizer_name": event.organizer_name,
             "participants": participants,
         }
+    )
+
+
+def join_event(request, public_id):
+    """イベントに参加登録する。visitor_idで参加済みかを判定し、二重登録を防ぐ。"""
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    try:
+        event = Event.objects.get(public_id=public_id)
+    except Event.DoesNotExist:
+        return JsonResponse({"error": "イベントが見つかりません"}, status=404)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"error": "リクエストが不正です"}, status=400)
+
+    if not isinstance(data, dict) or "name" not in data:
+        return JsonResponse({"error": "名前を入力してください"}, status=400)
+
+    if not isinstance(data["name"], str) or not data["name"].strip():
+        return JsonResponse({"error": "名前を入力してください"}, status=400)
+
+    name = data["name"].strip()
+    max_length = Participant._meta.get_field("name").max_length
+    if len(name) > max_length:
+        return JsonResponse({"error": "入力が長すぎます"}, status=400)
+
+    participant = event.participants.filter(visitor_id=request.visitor_id).first()
+    status = 200
+    if participant is None:
+        participant = Participant.objects.create(
+            event=event, name=name, visitor_id=request.visitor_id
+        )
+        status = 201
+
+    participants = [
+        {"id": p.id, "name": p.name}
+        for p in event.participants.order_by("created_at", "id")
+    ]
+
+    return JsonResponse(
+        {
+            "id": participant.id,
+            "name": participant.name,
+            "participants": participants,
+        },
+        status=status,
     )
