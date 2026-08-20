@@ -27,8 +27,8 @@ def event_page(request, public_id):
     )
 
 
-def event_done(request):#一時的に, public_idを削除
-    return render(request, "events/event_done.html")#一時的に, {"public_id": public_id}を削除
+def event_done(request, public_id):
+    return render(request, "events/event_done.html", {"public_id": public_id})
 
 
 def my_events_list(request):

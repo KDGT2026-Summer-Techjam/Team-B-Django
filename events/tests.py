@@ -203,6 +203,22 @@ class EventPageTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
+class EventDoneTests(TestCase):
+    def setUp(self):
+        self.event = Event.objects.create(
+            title="長岡花火大会",
+            event_date="2026-08-22",
+            location="新潟県長岡市",
+            organizer_name="田中",
+        )
+
+    def test_event_done_page_returns_public_id_in_context(self):
+        response = self.client.get(f"/e/{self.event.public_id}/done")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["public_id"], self.event.public_id)
+
+
 class JoinEventTests(TestCase):
     def setUp(self):
         self.event = Event.objects.create(
