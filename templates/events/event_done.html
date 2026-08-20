@@ -10,7 +10,7 @@
     <!-- このページ専用の追加CSS -->
     <link rel="stylesheet" href="{% static 'css/event_done.css' %}">
 </head>
-<body>
+<body data-public-id="{{ public_id }}">
 
     <!-- ヘッダー -->
     <header>
@@ -105,6 +105,5 @@
 
     <!-- JSの読み込み -->
     <script src="{% static 'js/sccript.js' %}"></script>
-    <script src="{% static 'js/event_done.js' %}"></script>
 </body>
 </html>
