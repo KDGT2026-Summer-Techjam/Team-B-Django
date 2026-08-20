@@ -49,6 +49,22 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   }
 
+  // APIのエラーメッセージ文言から対象フィールドを判定する
+  // ※ views_api.py は { "error": "..." } のみを返しフィールド名を含まないため、
+  //   文言で一意に特定できるものだけ対応フィールドに出し、それ以外はタイトル欄に出す
+  function errorTargetId(message) {
+      if (message === '日付が不正です') return 'error-date';
+      if (message === '投稿者名を入力してください') return 'error-author';
+      return 'error-title';
+  }
+
+  // エラーメッセージを対象フィールドの下に表示する
+  function showError(message) {
+      const target = document.getElementById(errorTargetId(message));
+      target.textContent = message;
+      target.style.display = 'block';
+  }
+
   // 完了ボタンクリック時の処理
   btnComplete.addEventListener('click', async () => {
       clearErrors();
@@ -76,21 +92,16 @@ document.addEventListener('DOMContentLoaded', () => {
               const data = await response.json();
               window.location.href = `/e/${data.public_id}/done`;
           } else {
-              // エラー時: 赤字で表示（APIから返るエラーメッセージの構造に合わせて調整してください）
+              // エラー時: メッセージ内容に応じた対象フィールドの下に赤字で表示
               const errorData = await response.json();
-              
-              // 簡易的な全体エラー表示の例
+
               if (errorData.error) {
-                  const titleError = document.getElementById('error-title');
-                  titleError.textContent = errorData.error;
-                  titleError.style.display = 'block';
+                  showError(errorData.error);
               }
           }
       } catch (error) {
           console.error('API Error:', error);
-          const titleError = document.getElementById('error-title');
-          titleError.textContent = "通信エラーが発生しました。";
-          titleError.style.display = 'block';
+          showError("通信エラーが発生しました。");
       }
   });
 });

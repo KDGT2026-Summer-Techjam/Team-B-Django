@@ -31,13 +31,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
               if (eventData.participants && eventData.participants.length > 0) {
                   // 参加者がいる場合はループして追加
+                  // 参加者名はユーザー入力のため、textContent + <br>要素でエスケープして描画する
                   eventData.participants.forEach(participant => {
-                      // innerHTMLを使って改行タグ（<br>）を含める
-                      membersContainer.innerHTML += `・${participant.name}<br>`;
+                      membersContainer.appendChild(document.createTextNode(`・${participant.name}`));
+                      membersContainer.appendChild(document.createElement('br'));
                   });
               } else {
                   // 参加者がいない場合
-                  membersContainer.innerHTML = '・まだメンバーはいません<br>';
+                  membersContainer.textContent = '・まだメンバーはいません';
               }
               
           } else {
