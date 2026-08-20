@@ -12,8 +12,19 @@ def new_event(request):
 
 
 def event_page(request, public_id):
-    get_object_or_404(Event, public_id=public_id)
-    return render(request, "events/event_page.html", {"public_id": public_id})
+    event = get_object_or_404(Event, public_id=public_id)
+    is_participant = event.participants.filter(
+        visitor_id=request.visitor_id
+    ).exists()
+    return render(
+        request,
+        "events/event_page.html",
+        {
+            "public_id": public_id,
+            "event": event,
+            "is_participant": is_participant,
+        },
+    )
 
 
 def event_done(request, public_id):
