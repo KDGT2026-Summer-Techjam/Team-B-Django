@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404, render
 
 from .models import Event
+from .views_api import can_edit_event
 
 
 def home(request):
@@ -36,6 +37,10 @@ def my_events_list(request):
 
 
 def event_edit(request, public_id):
+    """編集画面。編集権限が無ければエラー画面を403で返す。"""
+    event = get_object_or_404(Event, public_id=public_id)
+    if not can_edit_event(request, event):
+        return render(request, "events/error.html", status=403)
     return render(request, "events/event_edit.html", {"public_id": public_id})
 
 
