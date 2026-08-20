@@ -16,3 +16,7 @@ staticfiles/
 .DS_Store
 .vscode/
 .idea/
+
+# Claude
+.claude/
+CLAUDE.md
