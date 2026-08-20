@@ -58,7 +58,24 @@
   display: none;
 }
 
-/* アクションアイコン */
+/* ================================
+   プレビュー内のテキスト（ただの表示用）調整
+================================ */
+/* プレビューカード内の全ての文字色を「カードが投稿されました！」(#333)と統一 */
+.preview-card .text-section div,
+.preview-card .text-section span {
+  color: #333 !important;
+}
+
+/* inputをdivに変えたことで高さが潰れないように中央配置を指定 */
+.preview-card .input-title {
+  display: flex;
+  align-items: center;
+}
+
+/* ================================
+   アクション・戻るボタン
+================================ */
 .action-icons {
   display: flex;
   gap: 20px;
@@ -85,7 +102,6 @@
   stroke: #EC8A76;
 }
 
-/* 戻るボタン */
 .btn-return {
   position: absolute;
   bottom: 50px;
