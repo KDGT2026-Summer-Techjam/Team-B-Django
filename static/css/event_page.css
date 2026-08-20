@@ -7,16 +7,13 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
 }
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
 body {
     background-color: #F9F7F1;
-    color: #666;
-    height: 100vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    color: #333;
+    font-family: 'Inter', 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
 }
 
 /* ================================
@@ -57,7 +54,9 @@ header {
     width: 250px;
     height: 100vh;
     background-color: #8AB69B;
-    transform: translateX(-100%); /* デフォルトは隠す */
+     /* デフォルトは隠す */
+    transform: translateX(-100%);
+
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 100;
     display: flex;
@@ -100,6 +99,13 @@ header {
 /* ================================
    メインコンテンツ・カード
 ================================ */
+main {
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
 .main-content {
     flex: 1;
     display: flex;
@@ -125,7 +131,7 @@ header {
     position: absolute;
     top: 40px;
     right: 50px;
-    background-color: #EC8A76;
+    background-color: #F07A5D;
     color: white;
     border: none;
     padding: 8px 30px;
@@ -231,3 +237,4 @@ input:focus, textarea:focus {
     padding: 4px;
     line-height: 1.5;
 }
+
