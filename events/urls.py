@@ -12,7 +12,7 @@ urlpatterns = [
     path("api/events", views_api.create_event, name="api_create_event"),
     path(
         "api/events/<str:public_id>",
-        views_api.get_event,
+        views_api.event_detail,
         name="api_get_event",
     ),
     path(

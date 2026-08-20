@@ -1,0 +1,233 @@
+@charset "UTF-8";
+
+/* ================================
+   リセットと基本設定
+================================ */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+}
+
+body {
+    background-color: #F9F7F1;
+    color: #666;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ================================
+   ヘッダー
+================================ */
+header {
+    padding: 20px 30px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 10;
+}
+
+.header-title {
+    color: #BDBDBD;
+    font-size: 18px;
+    font-weight: bold;
+    display: inline-block;
+}
+
+/* ================================
+   サイドバー（JS制御用）
+================================ */
+.sidebar-trigger {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 30px;
+    height: 100vh;
+    z-index: 90;
+}
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 250px;
+    height: 100vh;
+    background-color: #8AB69B;
+    transform: translateX(-100%); /* デフォルトは隠す */
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
+}
+
+/* JSでこのクラスが付与された時に表示される */
+.sidebar.open {
+    transform: translateX(0);
+}
+
+.menu {
+    list-style: none;
+    width: 100%;
+    padding-left: 30px;
+}
+
+.menu li {
+    margin-bottom: 25px;
+    color: white;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.menu li:hover {
+    opacity: 0.7;
+}
+
+.menu li svg {
+    width: 20px;
+    height: 20px;
+    margin-right: 15px;
+    fill: white;
+}
+
+/* ================================
+   メインコンテンツ・カード
+================================ */
+.main-content {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+.card-container {
+    width: 800px;
+    height: 500px;
+    background-color: #FFFFFF;
+    border-radius: 40px;
+    border: 1px solid #ddd;
+    padding: 40px 50px;
+    position: relative;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+/* 完了ボタン */
+.btn-complete {
+    position: absolute;
+    top: 40px;
+    right: 50px;
+    background-color: #EC8A76;
+    color: white;
+    border: none;
+    padding: 8px 30px;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-complete:hover {
+    background-color: #d97864;
+}
+
+.btn-complete:active {
+    transform: scale(0.95);
+}
+
+/* カード内レイアウト */
+.card-content {
+    display: flex;
+    margin-top: 20px;
+    height: 100%;
+}
+
+.text-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.image-section {
+    width: 320px;
+    height: 320px;
+    background-color: #EEEEEE;
+    display: flex;
+    margin-top: 30px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.image-section svg {
+    width: 80px;
+    height: 80px;
+    fill: #888888;
+}
+
+/* ================================
+   入力フォーム
+================================ */
+input, textarea {
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    color: inherit;
+    outline: none;
+}
+
+input::placeholder, textarea::placeholder {
+    color: #999;
+}
+
+input:hover, textarea:hover,
+input:focus, textarea:focus {
+    background-color: rgba(0, 0, 0, 0.03);
+    border-radius: 4px;
+}
+
+.input-title {
+    font-size: 52px;
+    font-weight: normal;
+    color: #666;
+    margin-bottom: 10px;
+    width: 100%;
+    height: 70px;
+}
+
+.input-date, .input-time, .input-location, .input-author {
+    font-size: 16px;
+    width: 80%;
+    padding: 4px;
+}
+
+.members-area {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.members-area span {
+    font-size: 16px;
+    padding: 4px;
+}
+
+.input-members {
+    font-size: 14px;
+    resize: none;
+    width: 80%;
+    height: 60px;
+    padding: 4px;
+    line-height: 1.5;
+}
