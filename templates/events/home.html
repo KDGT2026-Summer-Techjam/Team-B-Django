@@ -5,6 +5,42 @@
   <title>SeasonHub（仮）</title>
 </head>
 <body>
-  <!-- TODO: フロント担当 -->
+  <main class="home">
+    <section class="hero">
+        <h1 class="app-name">SeasonHub</h1>
+        <p class="catch-copy">友人や親しい人と季節のイベントを、もっと気軽に。</p>
+
+        <a href="{% url 'new_event' %}" class="cta-button">
+            誘いを作成
+        </a>
+    </section>
+
+    <section class="how-to">
+        <h2 class="how-to-title">使い方</h2>
+
+        <ol class="how-to-steps">
+            <li class="how-to-step">
+                <h3 class="step-title">作る</h3>
+                <p class="step-description">
+                    行きたいイベントの情報を入力して、誘いを作ります。
+                </p>
+            </li>
+
+            <li class="how-to-step">
+                <h3 class="step-title">送る</h3>
+                <p class="step-description">
+                    発行された共有URLを友達に送ります。
+                </p>
+            </li>
+
+            <li class="how-to-step">
+                <h3 class="step-title">集まる</h3>
+                <p class="step-description">
+                    友達が参加ボタンを押して、参加者が集まります。
+                </p>
+            </li>
+        </ol>
+    </section>
+</main>
 </body>
 </html>
