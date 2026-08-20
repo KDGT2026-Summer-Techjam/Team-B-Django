@@ -12,7 +12,17 @@ urlpatterns = [
     path("api/events", views_api.create_event, name="api_create_event"),
     path(
         "api/events/<str:public_id>",
-        views_api.get_event,
+        views_api.event_detail,
         name="api_get_event",
+    ),
+    path(
+        "api/events/<str:public_id>/join",
+        views_api.join_event,
+        name="api_join_event",
+    ),
+    path(
+    "api/events/<str:public_id>/participants",
+    views_api.add_participant,
+    name="api_add_participant",
     ),
 ]

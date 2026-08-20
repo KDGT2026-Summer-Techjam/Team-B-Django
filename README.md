@@ -74,6 +74,69 @@ python manage.py runserver
 
 ---
 
+## フォルダ構成
+
+```text
+Team-B-Django/
+├── README.md              # このファイル
+├── manage.py              # Django管理コマンドの実行入口
+├── requirements.txt       # 依存パッケージ一覧
+├── render.yaml            # Renderへのデプロイ設定
+├── config/                # プロジェクト設定
+│   ├── settings.py        # Django設定（DB接続・ミドルウェア登録など）
+│   ├── urls.py            # 全体のURLルーティングの入口
+│   ├── asgi.py
+│   └── wsgi.py
+├── events/                # イベント機能アプリ
+│   ├── models.py          # DBモデル（Event, Participant）
+│   ├── urls.py             # 画面URL・API URLの定義
+│   ├── views_pages.py     # 各画面（HTML）を描画するビュー
+│   ├── views_api.py       # フロントJSから叩くJSON API
+│   ├── middleware.py      # visitor_id発行のミドルウェア
+│   ├── tests.py           # テストコード
+│   └── migrations/        # DBマイグレーションファイル
+├── templates/
+│   └── events/            # 各画面のHTMLテンプレート
+│       ├── home.html
+│       ├── new_event.html
+│       ├── event_page.html
+│       ├── event_done.html
+│       ├── event_edit.html
+│       ├── my_events.html
+│       └── error.html
+└── docs/                  # ドキュメント
+    ├── 要件定義.md
+    ├── 設計.md
+    ├── 開発計画.md
+    ├── setup.md
+    ├── deploy.md
+    └── pr-guide.md
+```
+
+### 主要ファイルの役割
+
+| ファイル | 役割 |
+| --- | --- |
+| [config/urls.py](config/urls.py) | 全体のURLルーティングの入口。`events/urls.py`を読み込み、404時は`error_page`に振り分け |
+| [config/settings.py](config/settings.py) | Django設定（DB接続・ミドルウェア登録など） |
+| [events/urls.py](events/urls.py) | 画面URL（`/`, `/new`, `/e/<public_id>/` 等）とAPI URL（`/api/events/...`）の定義 |
+| [events/views_pages.py](events/views_pages.py) | 各画面（HTML）を描画するビュー。`home` `new_event` `event_page` `event_done` `event_edit` `my_events_list` `error_page` |
+| [events/views_api.py](events/views_api.py) | フロントJSから叩くJSON API。`create_event`（作成） `get_event`（詳細取得） `join_event`（参加登録） |
+| [events/models.py](events/models.py) | DBモデル。`Event`（イベント本体、`public_id`と`edit_token`を自動発行） `Participant`（参加者） |
+| [events/middleware.py](events/middleware.py) | 初回アクセス時に`visitor_id`をCookie発行し、参加済み判定や自分のイベント一覧の識別に使う |
+| [events/migrations/](events/migrations/) | モデル変更を反映するDBマイグレーションファイル |
+| [templates/events/home.html](templates/events/home.html) | トップページ。「誘いを作成」への導線 |
+| [templates/events/new_event.html](templates/events/new_event.html) | イベント作成フォーム（タイトル・日付・場所・投稿者名） |
+| [templates/events/event_page.html](templates/events/event_page.html) | 誘いのページ。イベント情報表示＋参加者一覧＋参加ボタン |
+| [templates/events/event_done.html](templates/events/event_done.html) | 作成完了画面。共有用URLの表示・コピー |
+| [templates/events/event_edit.html](templates/events/event_edit.html) | イベント編集フォーム |
+| [templates/events/my_events.html](templates/events/my_events.html) | 自分が作成・参加したイベントの一覧 |
+| [templates/events/error.html](templates/events/error.html) | 404などのエラー表示画面 |
+| [manage.py](manage.py) | Django管理コマンドの実行入口（`runserver` `migrate` 等） |
+| [render.yaml](render.yaml) | Renderへのデプロイ設定 |
+
+---
+
 ## 担当
 
 | 役割 | 人数 | 担当者 |

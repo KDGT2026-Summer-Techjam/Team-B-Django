@@ -5,6 +5,9 @@
   <title>誘いのページ - SeasonHub（仮）</title>
 </head>
 <body data-public-id="{{ public_id }}">
+  <!-- docs/設計.md「CSRFの扱い」: JSはdocument.cookieのcsrftokenを読み、
+       X-CSRFTokenヘッダに付けてfetchする。このタグでCookieを発行する -->
+  {% csrf_token %}
   <!-- TODO: フロント担当。参加前／参加後の2状態をJSで切り替える -->
 </body>
 </html>

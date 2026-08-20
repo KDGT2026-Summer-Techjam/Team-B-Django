@@ -1,0 +1,126 @@
+/* ================================
+   event_done ページ用の追加スタイル
+================================ */
+
+.done-page-layout {
+  flex-direction: column;
+}
+
+.done-title {
+  font-size: 32px;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+  color: #333;
+  text-align: center;
+}
+
+.done-subtitle {
+  font-size: 16px;
+  color: #555;
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+/* プレビューとアイコンをまとめる枠 */
+.preview-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+/* 800px × 500pxのカードを 0.65倍 に縮小したサイズの枠 */
+.preview-scale-box {
+  width: 520px;
+  height: 325px;
+  position: relative;
+  margin-bottom: 20px;
+  border-radius: 26px;
+  border: 1.5px solid #333;
+  overflow: hidden;
+  background-color: white;
+}
+
+/* 読み込んだカード本体の縮小指定 */
+.preview-card {
+  transform: scale(0.65);
+  transform-origin: top left;
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  border: none; /* 親の枠線を使うので自身の枠線を消す */
+  box-shadow: none;
+}
+
+/* プレビュー画面では完了ボタンを非表示 */
+.preview-card .btn-complete {
+  display: none;
+}
+
+/* ================================
+   プレビュー内のテキスト（ただの表示用）調整
+================================ */
+/* プレビューカード内の全ての文字色を「カードが投稿されました！」(#333)と統一 */
+.preview-card .text-section div,
+.preview-card .text-section span {
+  color: #333 !important;
+}
+
+/* inputをdivに変えたことで高さが潰れないように中央配置を指定 */
+.preview-card .input-title {
+  display: flex;
+  align-items: center;
+}
+
+/* ================================
+   アクション・戻るボタン
+================================ */
+.action-icons {
+  display: flex;
+  gap: 20px;
+  padding-right: 5px;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+}
+
+.icon-btn svg {
+  width: 32px;
+  height: 26px;
+  stroke: #333;
+  stroke-width: 2;
+  fill: none;
+  transition: stroke 0.2s;
+}
+
+.icon-btn:hover svg {
+  stroke: #EC8A76;
+}
+
+.btn-return {
+  position: absolute;
+  bottom: 50px;
+  right: 50px;
+  z-index: 2;
+  background-color: #EC8A76;
+  color: white;
+  border: none;
+  padding: 10px 30px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-return:hover {
+  background-color: #d97864;
+}
+
+.btn-return:active {
+  transform: scale(0.95);
+}
