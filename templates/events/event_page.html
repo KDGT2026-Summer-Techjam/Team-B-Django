@@ -3,11 +3,68 @@
 <head>
   <meta charset="UTF-8">
   <title>誘いのページ - SeasonHub（仮）</title>
+  <link rel="stylesheet" href="{% static 'css/common.css' %}">
+  <link rel="stylesheet" href="../../static/css/common copy.css">
+
+  <script src="{% static 'js/event_page.js' %}" defer></script>
 </head>
 <body data-public-id="{{ public_id }}">
   <!-- docs/設計.md「CSRFの扱い」: JSはdocument.cookieのcsrftokenを読み、
-       X-CSRFTokenヘッダに付けてfetchする。このタグでCookieを発行する -->
+      X-CSRFTokenヘッダに付けてfetchする。このタグでCookieを発行する -->
   {% csrf_token %}
   <!-- TODO: フロント担当。参加前／参加後の2状態をJSで切り替える -->
+
+  <!-- サイドバー -->
+  <aside class="sidebar">
+    <nav>
+      <ul>
+        <li>home</li>
+        <li>create</li>
+        <li>my card</li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- main -->
+  <main class="card-container">
+    <div class="event-card">
+
+      <h1 id="evnt-title">タイトル</h1>
+
+      <div class="event-details">
+        <p id="event-date">YYYY/MM/DD</p>
+        <p id="event-days-left">(予定日までの日にち)</p>
+        <p id="event-time">hh:mm</p>
+        <p id="event-location">場所</p>
+        <p id="event-author">投稿者</p>
+      </div>
+
+      <div class="member-section">
+        <div class="member-header">
+          <span>メンバー</span>
+
+          <!-- js で内容変更する -->
+          <span id="event-member-count">〇人</span>
+
+        </div>
+
+        <!-- js で内容変更する -->
+        <ul class="member-list" id="event-member-list">
+          <li>名前</li>
+          <li>名前</li>
+        </ul>
+
+      </div>
+
+      <!-- js で画像を変更する？ -->
+      <div class="visual-area">
+        <div class="image-planceholder"></div>
+      </div>
+
+      <button class="btn-complete" id="event-join-btn">参加する</button>
+      
+    </div>
+    
+  </main>
 </body>
 </html>
