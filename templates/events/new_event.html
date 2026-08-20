@@ -9,6 +9,9 @@
     <link rel="stylesheet" href="{% static 'css/common.css' %}">
 </head>
 <body>
+    <!-- docs/設計.md「CSRFの扱い」: JSはdocument.cookieのcsrftokenを読み、
+         X-CSRFTokenヘッダに付けてfetchする。このタグでCookieを発行する -->
+    {% csrf_token %}
 
     <!-- ヘッダー -->
     <header>
