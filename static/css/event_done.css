@@ -106,6 +106,7 @@
   position: absolute;
   bottom: 50px;
   right: 50px;
+  z-index: 2;
   background-color: #EC8A76;
   color: white;
   border: none;
