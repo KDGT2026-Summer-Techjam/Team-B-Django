@@ -637,3 +637,33 @@ class EventEditPageTests(TestCase):
         response = self.client.get("/e/zzzzzz/edit")
 
         self.assertEqual(response.status_code, 404)
+
+
+class CsrfTokenTests(TestCase):
+    """docs/設計.md「CSRFの扱い」: POST/PATCH APIを呼ぶ画面はcsrftokenを発行する"""
+
+    def setUp(self):
+        self.event = Event.objects.create(
+            title="長岡花火大会",
+            event_date="2026-08-22",
+            location="新潟県長岡市",
+            organizer_name="田中",
+            creator_visitor_id="creator",
+        )
+
+    def test_new_event_page_issues_csrf_token(self):
+        response = self.client.get("/new")
+
+        self.assertIn("csrfmiddlewaretoken", response.content.decode())
+
+    def test_event_page_issues_csrf_token(self):
+        response = self.client.get(f"/e/{self.event.public_id}/")
+
+        self.assertIn("csrfmiddlewaretoken", response.content.decode())
+
+    def test_event_edit_page_issues_csrf_token(self):
+        self.client.cookies["visitor_id"] = "creator"
+
+        response = self.client.get(f"/e/{self.event.public_id}/edit")
+
+        self.assertIn("csrfmiddlewaretoken", response.content.decode())
