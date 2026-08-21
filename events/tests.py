@@ -230,7 +230,7 @@ class JoinEventTests(TestCase):
 
     def post(self, payload):
         return self.client.post(
-            f"/api/events/{self.event.public_id}/join",
+            f"/api/events/{self.event.public_id}/participants",
             data=json.dumps(payload),
             content_type="application/json",
         )
@@ -272,7 +272,7 @@ class JoinEventTests(TestCase):
 
     def test_join_unknown_event_returns_404(self):
         response = self.client.post(
-            "/api/events/zzzzzz/join",
+            "/api/events/zzzzzz/participants",
             data=json.dumps({"name": "山田"}),
             content_type="application/json",
         )
@@ -295,7 +295,7 @@ class JoinEventTests(TestCase):
         self.assertFalse(Participant.objects.exists())
 
     def test_join_event_with_get_returns_405(self):
-        response = self.client.get(f"/api/events/{self.event.public_id}/join")
+        response = self.client.get(f"/api/events/{self.event.public_id}/participants")
 
         self.assertEqual(response.status_code, 405)
         self.assertEqual(response.headers["Allow"], "POST")
