@@ -103,21 +103,26 @@ document.addEventListener('DOMContentLoaded', () => {
     renderParticipants(eventData.participants || []);
   }
 
+  // 読み込みに失敗したとき、テンプレートのプレースホルダ（「〇人」「読み込み中...」）を残さない
+  function showLoadError(message) {
+    titleEl.textContent = message;
+    memberCountEl.textContent = '';
+    memberListEl.textContent = '';
+  }
+
   // イベント情報を読み込んで描画する
   async function loadEvent() {
     try {
       const response = await fetch(`/api/events/${publicId}`);
       if (!response.ok) {
         console.error('データの取得に失敗しました。ステータスコード:', response.status);
-        titleEl.textContent = 'データを読み込めませんでした';
-        memberListEl.textContent = '';
+        showLoadError('データを読み込めませんでした');
         return;
       }
       renderEvent(await response.json());
     } catch (error) {
       console.error('通信エラーが発生しました:', error);
-      titleEl.textContent = '通信エラー';
-      memberListEl.textContent = '';
+      showLoadError('通信エラー');
     }
   }
 
@@ -133,18 +138,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     joinBtnEl.disabled = true;
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      // トークンが取れないときはヘッダを付けない（文字列 "null" を送るとサーバー側で扱いにくい）
+      const csrfToken = getCookie('csrftoken');
+      if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken;
+      }
+
       const response = await fetch(`/api/events/${publicId}/participants`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': getCookie('csrftoken')
-        },
+        headers,
         body: JSON.stringify({ name })
       });
 
-      const data = await response.json();
+      // エラー時はHTML（CSRFエラーページなど）が返ることがあるため、JSONで読めない場合も想定する
+      const data = await response.json().catch(() => null);
+
       if (!response.ok) {
-        showError(data.error || '参加に失敗しました');
+        console.error('参加登録に失敗しました。ステータスコード:', response.status);
+        showError(data && data.error ? data.error : '参加に失敗しました');
+        return;
+      }
+      if (!data) {
+        console.error('参加登録のレスポンスをJSONとして読めませんでした');
+        showError('参加に失敗しました');
         return;
       }
 
