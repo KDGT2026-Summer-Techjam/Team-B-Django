@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ja">
 
@@ -54,7 +55,7 @@
 
             <!-- 左側のテキスト入力エリア -->
             <div class="text-section">
-              <h1 id="evnt-title">タイトル</h1>
+              <h1 id="event-title">タイトル</h1>
               <div class="event-details">
                 <p id="event-date">YYYY/MM/DD</p>
                 <p id="event-days-left">(予定日までの日にち)</p>
@@ -63,7 +64,7 @@
                 <p id="event-author">投稿者</p>
               </div>
 
-              <div class="member-section">
+              <div class="members-area">
                 <div class="member-header">
                   <span>メンバー</span>
 
@@ -72,7 +73,7 @@
                 </div>
 
                 <!-- js で内容変更する -->
-                <ul class="member-list" id="event-member-list">
+                <ul class="input-members" id="event-member-list">
                   <li>名前</li>
                   <li>名前</li>
                 </ul>
