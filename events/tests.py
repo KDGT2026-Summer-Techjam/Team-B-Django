@@ -197,6 +197,64 @@ class EventPageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIs(response.context["is_participant"], False)
 
+    def test_event_page_renders_participant_flag_for_participant(self):
+        """JSが参加前／参加後の初期状態を決めるフラグをテンプレートが出力する"""
+        self.client.cookies["visitor_id"] = "visitor-a"
+        Participant.objects.create(
+            event=self.event,
+            name="山田",
+            visitor_id="visitor-a",
+        )
+
+        response = self.client.get(f"/e/{self.event.public_id}/")
+
+        self.assertIn('data-is-participant="true"', response.content.decode())
+
+    def test_event_page_renders_participant_flag_for_non_participant(self):
+        self.client.cookies["visitor_id"] = "visitor-a"
+
+        response = self.client.get(f"/e/{self.event.public_id}/")
+
+        self.assertIn('data-is-participant="false"', response.content.decode())
+
+    def test_event_page_renders_public_id_for_api_call(self):
+        """JSはbodyのdata-public-idを読んでAPIを呼ぶ"""
+        response = self.client.get(f"/e/{self.event.public_id}/")
+
+        self.assertIn(
+            f'data-public-id="{self.event.public_id}"', response.content.decode()
+        )
+
+    def test_event_page_renders_elements_used_by_script(self):
+        """event_page.jsが操作するIDがテンプレートに揃っている"""
+        response = self.client.get(f"/e/{self.event.public_id}/")
+
+        content = response.content.decode()
+        for element_id in (
+            "event-title",
+            "event-date",
+            "event-days-left",
+            "event-location",
+            "event-author",
+            "event-member-count",
+            "event-member-list",
+            "event-join-area",
+            "event-joined-message",
+            "event-name-input",
+            "event-join-btn",
+            "event-error",
+        ):
+            with self.subTest(element_id=element_id):
+                self.assertIn(f'id="{element_id}"', content)
+
+    def test_event_page_loads_event_page_script(self):
+        response = self.client.get(f"/e/{self.event.public_id}/")
+
+        # ManifestStaticFilesStorageがファイル名にハッシュを挟むため正規表現で照合する
+        self.assertRegex(
+            response.content.decode(), r"js/event_page(\.[0-9a-f]+)?\.js"
+        )
+
     def test_event_page_returns_404_for_unknown_public_id(self):
         response = self.client.get("/e/zzzzzz/")
 
@@ -230,7 +288,7 @@ class JoinEventTests(TestCase):
 
     def post(self, payload):
         return self.client.post(
-            f"/api/events/{self.event.public_id}/join",
+            f"/api/events/{self.event.public_id}/participants",
             data=json.dumps(payload),
             content_type="application/json",
         )
@@ -272,7 +330,7 @@ class JoinEventTests(TestCase):
 
     def test_join_unknown_event_returns_404(self):
         response = self.client.post(
-            "/api/events/zzzzzz/join",
+            "/api/events/zzzzzz/participants",
             data=json.dumps({"name": "山田"}),
             content_type="application/json",
         )
@@ -295,7 +353,7 @@ class JoinEventTests(TestCase):
         self.assertFalse(Participant.objects.exists())
 
     def test_join_event_with_get_returns_405(self):
-        response = self.client.get(f"/api/events/{self.event.public_id}/join")
+        response = self.client.get(f"/api/events/{self.event.public_id}/participants")
 
         self.assertEqual(response.status_code, 405)
         self.assertEqual(response.headers["Allow"], "POST")

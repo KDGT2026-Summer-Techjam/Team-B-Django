@@ -16,7 +16,7 @@ urlpatterns = [
         name="api_get_event",
     ),
     path(
-        "api/events/<str:public_id>/join",
+        "api/events/<str:public_id>/participants",
         views_api.join_event,
         name="api_join_event",
     ),
