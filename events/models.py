@@ -38,3 +38,18 @@ class Participant(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class Mission(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="missions")
+    order = models.PositiveIntegerField()
+    prompt_text = models.CharField(max_length=255)
+    # Base64エンコードした画像データをそのままDBに保存する（Renderの無料プランはディスクが永続化されないため）
+    photo = models.TextField(blank=True, null=True)
+    completed_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ["order"]
+
+    def __str__(self) -> str:
+        return f"{self.event.title} - {self.prompt_text}"
