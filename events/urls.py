@@ -20,9 +20,4 @@ urlpatterns = [
         views_api.join_event,
         name="api_join_event",
     ),
-    path(
-    "api/events/<str:public_id>/participants",
-    views_api.add_participant,
-    name="api_add_participant",
-    ),
 ]
