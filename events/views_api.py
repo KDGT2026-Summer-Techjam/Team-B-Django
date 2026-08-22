@@ -230,6 +230,9 @@ def join_event(request, public_id):
             event=event, name=name, visitor_id=request.visitor_id
         )
         status = 201
+    else:
+        participant.name = name
+        participant.save()
 
     participants = [
         {"id": p.id, "name": p.name}
