@@ -2,26 +2,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 1. HTMLのbodyタグから public_id を取得
   const body = document.querySelector('body');
   const publicId = body.dataset.publicId;
-  
+
   // このページに title を表示する場所があるか（完了ページか）チェック
   const doneTitle = document.getElementById('done-title');
-  
+
   if (publicId && doneTitle) {
       try {
           // 2. GETリクエストでイベントデータを取得 (views_api.py の get_event に対応)
           const response = await fetch(`/api/events/${publicId}`);
-          
+
           if (response.ok) {
               const eventData = await response.json();
-              
+
               // 3. 取得したデータを各HTML要素にセットする
               document.getElementById('done-title').textContent = eventData.title;
-              
+
               // 日付のハイフン(YYYY-MM-DD)をスラッシュ(YYYY/MM/DD)に置換
               document.getElementById('done-date').textContent = eventData.event_date.replace(/-/g, '/');
-              
+
               // ※時間はバックエンドのAPIに存在しないため、HTMLの「時間未定」をそのまま表示させます
-              
+
               document.getElementById('done-location').textContent = eventData.location;
               document.getElementById('done-author').textContent = eventData.organizer_name;
 
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                   // 参加者がいない場合
                   membersContainer.textContent = '・まだメンバーはいません';
               }
-              
+
           } else {
               console.error("データの取得に失敗しました。ステータスコード:", response.status);
               doneTitle.textContent = "データを読み込めませんでした";

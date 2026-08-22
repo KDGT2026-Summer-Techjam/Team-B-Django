@@ -1,0 +1,146 @@
+/* ================================
+   my card ページ用の追加スタイル (static/css/my_event.css)
+================================ */
+
+.my-events-layout {
+  flex-direction: column;
+  padding-top: 80px; /* ヘッダー分の余白 */
+  height: 100vh;
+  align-items: center; /* 中央に配置 */
+}
+
+.page-title {
+  font-size: 32px;
+  color: #333;
+  margin-bottom: 5px;
+  text-align: center;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* 縦スクロールさせる領域 */
+.events-scroll-area {
+  width: 100%;
+  flex: 1;
+  overflow-y: auto; /* 縦に溢れたらスクロールバーを出す */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px; /* カード同士の間隔 */
+  padding-bottom: 80px; /* 下部の余白 */
+}
+
+/* スクロールバーの見た目を少し整える（Chrome, Safari向け） */
+.events-scroll-area::-webkit-scrollbar {
+  width: 8px;
+}
+.events-scroll-area::-webkit-scrollbar-thumb {
+  background-color: #ccc;
+  border-radius: 4px;
+}
+
+/* ================================
+ 参加予定／終わったイベントのセクション分け
+================================ */
+.event-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+}
+
+.section-heading {
+  width: 520px;
+  max-width: 100%;
+  color: #555;
+  font-size: 18px;
+  text-align: left;
+}
+
+.input-days-left {
+  font-size: 16px;
+  width: 80%;
+  padding: 4px;
+  color: #EC8A76;
+  font-weight: bold;
+}
+
+/* ================================
+ カードをリンク化するための追加スタイル
+================================ */
+.card-link {
+  text-decoration: none; /* リンクの下線を消す */
+  display: block; /* 余白などが崩れないようにする */
+  transition: transform 0.2s, box-shadow 0.2s; /* アニメーションの設定 */
+  border-radius: 26px; /* 中の枠線に合わせて角丸にする */
+  flex-shrink: 0; /* スクロール領域内でカードが潰れるのを防ぐ */
+}
+
+/* ホバーした時に少しだけ拡大して影をつける */
+.card-link:hover {
+  transform: scale(1.02);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* ================================
+ カードの縮小スタイル (event_doneの使い回し)
+================================ */
+.preview-scale-box {
+  width: 520px;
+  height: 325px;
+  position: relative;
+  border-radius: 26px;
+  border: 1.5px solid #333;
+  overflow: hidden;
+  background-color: white;
+}
+
+.preview-card {
+  width: 800px !important;      /* 無理やり押しつぶされるのを防ぐ */
+  max-width: 800px !important;  /* 絶対に800pxをキープさせる */
+  height: 500px !important;     /* 高さも500pxをキープ */
+  transform: scale(0.65);
+  transform-origin: top left;
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  border: none;
+  box-shadow: none;
+}
+
+.preview-card .text-section div {
+  color: #333 !important;
+}
+
+.empty-message {
+  color: #888;
+  font-size: 16px;
+  margin-top: 40px;
+}
+
+.empty-cta {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 10px 30px;
+  background-color: #EC8A76;
+  color: white;
+  border-radius: 10px;
+  font-size: 16px;
+  text-decoration: none;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.empty-cta:hover {
+  background-color: #d97864;
+}
+
+.empty-cta:active {
+  transform: scale(0.95);
+}
