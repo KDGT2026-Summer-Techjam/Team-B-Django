@@ -244,3 +244,48 @@ def join_event(request, public_id):
         },
         status=status,
     )
+
+def my_events(request):
+    #自分が参加中・作成済みのイベント一覧を返す。
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    visitor_id = request.visitor_id
+
+    if not visitor_id:
+        return JsonResponse({"events": []})
+
+    participant_event_ids = set(
+        Participant.objects.filter(
+            visitor_id=visitor_id
+        ).values_list("event_id", flat=True)
+    )
+
+    creator_event_ids = set(
+        Event.objects.filter(
+            creator_visitor_id=visitor_id
+        ).values_list("id", flat=True)
+    )
+
+    event_ids = participant_event_ids | creator_event_ids
+
+    events = Event.objects.filter(
+        id__in=event_ids
+    ).order_by("event_date")
+
+    return JsonResponse(
+        {
+            "events": [
+                {
+                    "public_id": event.public_id,
+                    "title": event.title,
+                    "event_date": event.event_date.isoformat(),
+                    "location": event.location,
+                    "organizer_name": event.organizer_name,
+                    "is_participant": event.id in participant_event_ids,
+                    "is_creator": event.id in creator_event_ids,
+                }
+                for event in events
+            ]
+        }
+    )
