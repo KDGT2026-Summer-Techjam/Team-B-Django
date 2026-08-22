@@ -370,6 +370,25 @@ class JoinEventTests(TestCase):
         self.assertEqual(Participant.objects.count(), 1)
         self.assertEqual(first_response.json(), second_response.json())
 
+    def test_join_event_twice_with_same_visitor_id_and_different_name_renames_participant(self):
+        first_response = self.post({"name": "山田"})
+        second_response = self.post({"name": "佐藤"})
+
+        self.assertEqual(first_response.status_code, 201)
+        self.assertEqual(second_response.status_code, 200)
+        self.assertEqual(Participant.objects.count(), 1)
+
+        participant = Participant.objects.get()
+        self.assertEqual(participant.name, "佐藤")
+        self.assertEqual(
+            second_response.json(),
+            {
+                "id": participant.id,
+                "name": "佐藤",
+                "participants": [{"id": participant.id, "name": "佐藤"}],
+            },
+        )
+
     def test_join_event_with_different_visitor_id_creates_another_participant(self):
         self.client.cookies["visitor_id"] = "visitor-a"
         self.post({"name": "山田"})
