@@ -45,6 +45,33 @@
 }
 
 /* ================================
+ 参加予定／終わったイベントのセクション分け
+================================ */
+.event-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+}
+
+.section-heading {
+  width: 520px;
+  max-width: 100%;
+  color: #555;
+  font-size: 18px;
+  text-align: left;
+}
+
+.input-days-left {
+  font-size: 16px;
+  width: 80%;
+  padding: 4px;
+  color: #EC8A76;
+  font-weight: bold;
+}
+
+/* ================================
  カードをリンク化するための追加スタイル
 ================================ */
 .card-link {
@@ -96,4 +123,24 @@
   color: #888;
   font-size: 16px;
   margin-top: 40px;
+}
+
+.empty-cta {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 10px 30px;
+  background-color: #EC8A76;
+  color: white;
+  border-radius: 10px;
+  font-size: 16px;
+  text-decoration: none;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.empty-cta:hover {
+  background-color: #d97864;
+}
+
+.empty-cta:active {
+  transform: scale(0.95);
 }
