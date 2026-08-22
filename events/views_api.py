@@ -68,11 +68,13 @@ def create_event(request):
     if event_date is None or event_date.isoformat() != data["event_date"]:
         return JsonResponse({"error": "日付が不正です"}, status=400)
 
+    # 作成者のvisitor_idを残す。編集画面の認可と、参加/作成イベントの集計に使う
     event = Event.objects.create(
         title=cleaned_data["title"],
         event_date=event_date,
         location=cleaned_data["location"],
         organizer_name=cleaned_data["organizer_name"],
+        creator_visitor_id=request.visitor_id,
     )
 
     return JsonResponse(
@@ -241,4 +243,49 @@ def join_event(request, public_id):
             "participants": participants,
         },
         status=status,
+    )
+
+def my_events(request):
+    #自分が参加中・作成済みのイベント一覧を返す。
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    visitor_id = request.visitor_id
+
+    if not visitor_id:
+        return JsonResponse({"events": []})
+
+    participant_event_ids = set(
+        Participant.objects.filter(
+            visitor_id=visitor_id
+        ).values_list("event_id", flat=True)
+    )
+
+    creator_event_ids = set(
+        Event.objects.filter(
+            creator_visitor_id=visitor_id
+        ).values_list("id", flat=True)
+    )
+
+    event_ids = participant_event_ids | creator_event_ids
+
+    events = Event.objects.filter(
+        id__in=event_ids
+    ).order_by("event_date")
+
+    return JsonResponse(
+        {
+            "events": [
+                {
+                    "public_id": event.public_id,
+                    "title": event.title,
+                    "event_date": event.event_date.isoformat(),
+                    "location": event.location,
+                    "organizer_name": event.organizer_name,
+                    "is_participant": event.id in participant_event_ids,
+                    "is_creator": event.id in creator_event_ids,
+                }
+                for event in events
+            ]
+        }
     )

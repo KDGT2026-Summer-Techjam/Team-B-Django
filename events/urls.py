@@ -20,4 +20,9 @@ urlpatterns = [
         views_api.join_event,
         name="api_join_event",
     ),
+    path(
+    "api/my-events",
+    views_api.my_events,
+    name="api_my_events",
+    ),
 ]
