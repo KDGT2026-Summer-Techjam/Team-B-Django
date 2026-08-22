@@ -89,6 +89,11 @@ STORAGES = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# ミッション写真(Base64)を含むリクエストを受け取るための上限。
+# Djangoの既定は2.5MBで、超えるとビューに到達する前に400になる。
+# 写真の上限5MBに対し、JSONのキーやdata URLの接頭辞の分だけ余裕を持たせる
+DATA_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
+
 # Render のリバースプロキシ経由の HTTPS 判定
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 CSRF_TRUSTED_ORIGINS = ["https://*.onrender.com"]
