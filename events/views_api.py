@@ -68,11 +68,13 @@ def create_event(request):
     if event_date is None or event_date.isoformat() != data["event_date"]:
         return JsonResponse({"error": "日付が不正です"}, status=400)
 
+    # 作成者のvisitor_idを残す。編集画面の認可と、参加/作成イベントの集計に使う
     event = Event.objects.create(
         title=cleaned_data["title"],
         event_date=event_date,
         location=cleaned_data["location"],
         organizer_name=cleaned_data["organizer_name"],
+        creator_visitor_id=request.visitor_id,
     )
 
     return JsonResponse(
@@ -243,52 +245,47 @@ def join_event(request, public_id):
         status=status,
     )
 
+def my_events(request):
+    #自分が参加中・作成済みのイベント一覧を返す。
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
 
-def add_participant(request, public_id):
-    """イベントに参加登録する。visitor_idで参加済みかを判定し、二重登録を防ぐ。"""
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
+    visitor_id = request.visitor_id
 
-    try:
-        event = Event.objects.get(public_id=public_id)
-    except Event.DoesNotExist:
-        return JsonResponse({"error": "イベントが見つかりません"}, status=404)
+    if not visitor_id:
+        return JsonResponse({"events": []})
 
-    try:
-        data = json.loads(request.body)
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return JsonResponse({"error": "リクエストが不正です"}, status=400)
+    participant_event_ids = set(
+        Participant.objects.filter(
+            visitor_id=visitor_id
+        ).values_list("event_id", flat=True)
+    )
 
-    if not isinstance(data, dict) or "name" not in data:
-        return JsonResponse({"error": "名前を入力してください"}, status=400)
+    creator_event_ids = set(
+        Event.objects.filter(
+            creator_visitor_id=visitor_id
+        ).values_list("id", flat=True)
+    )
 
-    if not isinstance(data["name"], str) or not data["name"].strip():
-        return JsonResponse({"error": "名前を入力してください"}, status=400)
+    event_ids = participant_event_ids | creator_event_ids
 
-    name = data["name"].strip()
-    max_length = Participant._meta.get_field("name").max_length
-
-    if len(name) > max_length:
-        return JsonResponse({"error": "入力が長すぎます"}, status=400)
-
-    participant = event.participants.filter(visitor_id=request.visitor_id).first()
-    status = 200
-    if participant is None:
-        participant = Participant.objects.create(
-            event=event, name=name, visitor_id=request.visitor_id
-        )
-        status = 201
-
-    participants = [
-        {"id": p.id, "name": p.name}
-        for p in event.participants.order_by("created_at", "id")
-    ]
+    events = Event.objects.filter(
+        id__in=event_ids
+    ).order_by("event_date")
 
     return JsonResponse(
         {
-            "id": participant.id,
-            "name": participant.name,
-            "participants": participants,
-        },
-        status=status,
+            "events": [
+                {
+                    "public_id": event.public_id,
+                    "title": event.title,
+                    "event_date": event.event_date.isoformat(),
+                    "location": event.location,
+                    "organizer_name": event.organizer_name,
+                    "is_participant": event.id in participant_event_ids,
+                    "is_creator": event.id in creator_event_ids,
+                }
+                for event in events
+            ]
+        }
     )

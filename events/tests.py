@@ -100,6 +100,58 @@ class CreateEventTests(TestCase):
                 Event.objects.all().delete()
 
 
+    def test_create_event_saves_visitor_id_as_creator(self):
+        self.client.cookies["visitor_id"] = "creator-a"
+
+        self.post(self.payload)
+
+        self.assertEqual(Event.objects.get().creator_visitor_id, "creator-a")
+
+    def test_create_event_saves_newly_issued_visitor_id_as_creator(self):
+        """Cookieが無い初回アクセスでも、ミドルウェアが発行したvisitor_idを作成者として残す。"""
+        response = self.post(self.payload)
+
+        issued_visitor_id = response.cookies["visitor_id"].value
+        self.assertTrue(issued_visitor_id)
+        self.assertEqual(Event.objects.get().creator_visitor_id, issued_visitor_id)
+
+    def test_creator_can_update_own_event_without_edit_token(self):
+        """作成者は編集トークンを渡さなくても、自分のvisitor_idだけで編集できる。"""
+        self.client.cookies["visitor_id"] = "creator-a"
+        public_id = self.post(self.payload).json()["public_id"]
+
+        response = self.client.patch(
+            f"/api/events/{public_id}",
+            data=json.dumps({"title": "長岡花火大会（雨天順延）"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Event.objects.get().title, "長岡花火大会（雨天順延）")
+
+    def test_creator_can_open_edit_page_without_edit_token(self):
+        self.client.cookies["visitor_id"] = "creator-a"
+        public_id = self.post(self.payload).json()["public_id"]
+
+        response = self.client.get(f"/e/{public_id}/edit")
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_other_visitor_cannot_update_created_event(self):
+        self.client.cookies["visitor_id"] = "creator-a"
+        public_id = self.post(self.payload).json()["public_id"]
+
+        self.client.cookies["visitor_id"] = "visitor-b"
+        response = self.client.patch(
+            f"/api/events/{public_id}",
+            data=json.dumps({"title": "乗っ取り"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(Event.objects.get().title, "長岡花火大会")
+
+
 class GetEventTests(TestCase):
     def setUp(self):
         self.event = Event.objects.create(
@@ -197,6 +249,64 @@ class EventPageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIs(response.context["is_participant"], False)
 
+    def test_event_page_renders_participant_flag_for_participant(self):
+        """JSが参加前／参加後の初期状態を決めるフラグをテンプレートが出力する"""
+        self.client.cookies["visitor_id"] = "visitor-a"
+        Participant.objects.create(
+            event=self.event,
+            name="山田",
+            visitor_id="visitor-a",
+        )
+
+        response = self.client.get(f"/e/{self.event.public_id}/")
+
+        self.assertIn('data-is-participant="true"', response.content.decode())
+
+    def test_event_page_renders_participant_flag_for_non_participant(self):
+        self.client.cookies["visitor_id"] = "visitor-a"
+
+        response = self.client.get(f"/e/{self.event.public_id}/")
+
+        self.assertIn('data-is-participant="false"', response.content.decode())
+
+    def test_event_page_renders_public_id_for_api_call(self):
+        """JSはbodyのdata-public-idを読んでAPIを呼ぶ"""
+        response = self.client.get(f"/e/{self.event.public_id}/")
+
+        self.assertIn(
+            f'data-public-id="{self.event.public_id}"', response.content.decode()
+        )
+
+    def test_event_page_renders_elements_used_by_script(self):
+        """event_page.jsが操作するIDがテンプレートに揃っている"""
+        response = self.client.get(f"/e/{self.event.public_id}/")
+
+        content = response.content.decode()
+        for element_id in (
+            "event-title",
+            "event-date",
+            "event-days-left",
+            "event-location",
+            "event-author",
+            "event-member-count",
+            "event-member-list",
+            "event-join-area",
+            "event-joined-message",
+            "event-name-input",
+            "event-join-btn",
+            "event-error",
+        ):
+            with self.subTest(element_id=element_id):
+                self.assertIn(f'id="{element_id}"', content)
+
+    def test_event_page_loads_event_page_script(self):
+        response = self.client.get(f"/e/{self.event.public_id}/")
+
+        # ManifestStaticFilesStorageがファイル名にハッシュを挟むため正規表現で照合する
+        self.assertRegex(
+            response.content.decode(), r"js/event_page(\.[0-9a-f]+)?\.js"
+        )
+
     def test_event_page_returns_404_for_unknown_public_id(self):
         response = self.client.get("/e/zzzzzz/")
 
@@ -230,7 +340,7 @@ class JoinEventTests(TestCase):
 
     def post(self, payload):
         return self.client.post(
-            f"/api/events/{self.event.public_id}/join",
+            f"/api/events/{self.event.public_id}/participants",
             data=json.dumps(payload),
             content_type="application/json",
         )
@@ -272,7 +382,7 @@ class JoinEventTests(TestCase):
 
     def test_join_unknown_event_returns_404(self):
         response = self.client.post(
-            "/api/events/zzzzzz/join",
+            "/api/events/zzzzzz/participants",
             data=json.dumps({"name": "山田"}),
             content_type="application/json",
         )
@@ -295,88 +405,6 @@ class JoinEventTests(TestCase):
         self.assertFalse(Participant.objects.exists())
 
     def test_join_event_with_get_returns_405(self):
-        response = self.client.get(f"/api/events/{self.event.public_id}/join")
-
-        self.assertEqual(response.status_code, 405)
-        self.assertEqual(response.headers["Allow"], "POST")
-
-
-class AddParticipantTests(TestCase):
-    def setUp(self):
-        self.event = Event.objects.create(
-            title="長岡花火大会",
-            event_date="2026-08-22",
-            location="新潟県長岡市",
-            organizer_name="田中",
-        )
-
-    def post(self, payload):
-        return self.client.post(
-            f"/api/events/{self.event.public_id}/participants",
-            data=json.dumps(payload),
-            content_type="application/json",
-        )
-
-    def test_add_participant_creates_participant_and_returns_participant_list(self):
-        response = self.post({"name": "山田"})
-
-        self.assertEqual(response.status_code, 201)
-        participant = Participant.objects.get()
-        self.assertEqual(participant.name, "山田")
-        self.assertTrue(participant.visitor_id)
-        self.assertEqual(
-            response.json(),
-            {
-                "id": participant.id,
-                "name": "山田",
-                "participants": [{"id": participant.id, "name": "山田"}],
-            },
-        )
-
-    def test_add_participant_twice_with_same_visitor_id_does_not_duplicate(self):
-        first_response = self.post({"name": "山田"})
-        second_response = self.post({"name": "山田"})
-
-        self.assertEqual(first_response.status_code, 201)
-        self.assertEqual(second_response.status_code, 200)
-        self.assertEqual(Participant.objects.count(), 1)
-        self.assertEqual(first_response.json(), second_response.json())
-
-    def test_add_participant_with_different_visitor_id_creates_another_participant(self):
-        self.client.cookies["visitor_id"] = "visitor-a"
-        self.post({"name": "山田"})
-
-        self.client.cookies["visitor_id"] = "visitor-b"
-        response = self.post({"name": "佐藤"})
-
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(Participant.objects.count(), 2)
-
-    def test_add_participant_unknown_event_returns_404(self):
-        response = self.client.post(
-            "/api/events/zzzzzz/participants",
-            data=json.dumps({"name": "山田"}),
-            content_type="application/json",
-        )
-
-        self.assertEqual(response.status_code, 404)
-        self.assertEqual(response.json(), {"error": "イベントが見つかりません"})
-
-    def test_add_participant_without_name_returns_400(self):
-        response = self.post({})
-
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("error", response.json())
-        self.assertFalse(Participant.objects.exists())
-
-    def test_add_participant_with_blank_name_returns_400(self):
-        response = self.post({"name": "   "})
-
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("error", response.json())
-        self.assertFalse(Participant.objects.exists())
-
-    def test_add_participant_with_get_returns_405(self):
         response = self.client.get(f"/api/events/{self.event.public_id}/participants")
 
         self.assertEqual(response.status_code, 405)

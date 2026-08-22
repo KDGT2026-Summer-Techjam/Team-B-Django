@@ -76,12 +76,10 @@ header {
     padding-left: 30px;
 }
 
+/* liタグ自体の設定（余白とホバーアニメーションのみ残す） */
 .menu li {
     margin-bottom: 25px;
-    color: white;
     font-size: 16px;
-    display: flex;
-    align-items: center;
     cursor: pointer;
     transition: opacity 0.2s;
 }
@@ -90,13 +88,24 @@ header {
     opacity: 0.7;
 }
 
-.menu li svg {
+/* ================================
+   aタグ（リンク）用の追加スタイル
+================================ */
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none; /* リンクの下線を消す */
+    color: white; /* リンクの文字色を白に強制する */
+    width: 100%;
+}
+
+/* aタグの中にあるsvgアイコンのスタイル */
+.sidebar-link svg {
     width: 20px;
     height: 20px;
     margin-right: 15px;
     fill: white;
 }
-
 /* ================================
    メインコンテンツ・カード
 ================================ */

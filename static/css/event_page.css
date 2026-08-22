@@ -1,0 +1,75 @@
+@charset "UTF-8";
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
+/* ================================
+   event_page ページ用の追加スタイル
+   （共通スタイルは common.css を参照）
+================================ */
+
+/* このページだけ Inter フォントを使う */
+* {
+  font-family: 'Inter', 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+}
+
+body {
+  color: #333;
+}
+
+main {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* このページだけボタンの色が異なる */
+.btn-complete {
+  background-color: #F07A5D;
+}
+
+/* 参加前だけ表示する名前入力エリア */
+.join-area {
+  margin-top: 12px;
+}
+
+.join-label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+/* common.cssのinputは枠なしだが、ここは初めて来た人に入力欄だと分かる必要があるため枠を付ける */
+.join-area input {
+  font-size: 16px;
+  width: 80%;
+  padding: 8px 10px;
+  border: 1px solid #D8D3C8;
+  border-radius: 6px;
+  background-color: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.join-area input:hover {
+  border-color: #BFB8A9;
+  background-color: #fff;
+}
+
+/* フォーカス中はページのアクセントカラーで縁取る */
+.join-area input:focus {
+  border-color: #F07A5D;
+  box-shadow: 0 0 0 3px rgba(240, 122, 93, 0.18);
+  background-color: #fff;
+}
+
+/* 参加後だけ表示する完了の合図 */
+.joined-message {
+  margin-top: 12px;
+  font-weight: 700;
+  color: #F07A5D;
+}
+
+.error-msg {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: red;
+}

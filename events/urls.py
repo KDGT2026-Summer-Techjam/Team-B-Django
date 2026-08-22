@@ -16,13 +16,13 @@ urlpatterns = [
         name="api_get_event",
     ),
     path(
-        "api/events/<str:public_id>/join",
+        "api/events/<str:public_id>/participants",
         views_api.join_event,
         name="api_join_event",
     ),
     path(
-    "api/events/<str:public_id>/participants",
-    views_api.add_participant,
-    name="api_add_participant",
+    "api/my-events",
+    views_api.my_events,
+    name="api_my_events",
     ),
 ]
