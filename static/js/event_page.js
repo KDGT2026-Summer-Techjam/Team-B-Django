@@ -92,6 +92,16 @@ document.addEventListener('DOMContentLoaded', () => {
       memberListEl.appendChild(item);
     }
   }
+  // 開催日が過ぎたイベントか判定する。(開催日target < today なら true)
+  function isPastEvent(eventDate) {
+    const target = new Date(`${eventDate}T00:00:00`);
+    if (Number.isNaN(target.getTime())) {
+      return false;
+    }
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return target < today;
+  }
 
   function renderEvent(eventData) {
     titleEl.textContent = eventData.title;
@@ -101,6 +111,12 @@ document.addEventListener('DOMContentLoaded', () => {
     locationEl.textContent = eventData.location;
     authorEl.textContent = `${eventData.organizer_name} が誘っています`;
     renderParticipants(eventData.participants || []);
+
+    // 開催日が過ぎていたら「参加ボタン」と「名前入力欄」を隠す。
+    if (isPastEvent(eventData.event_date)) {
+      joinAreaEl.hidden = true;
+      joinBtnEl.hidden = true;
+    }
   }
 
   // 読み込みに失敗したとき、テンプレートのプレースホルダ（「〇人」「読み込み中...」）を残さない
