@@ -68,11 +68,13 @@ def create_event(request):
     if event_date is None or event_date.isoformat() != data["event_date"]:
         return JsonResponse({"error": "日付が不正です"}, status=400)
 
+    # 作成者のvisitor_idを残す。編集画面の認可と、参加/作成イベントの集計に使う
     event = Event.objects.create(
         title=cleaned_data["title"],
         event_date=event_date,
         location=cleaned_data["location"],
         organizer_name=cleaned_data["organizer_name"],
+        creator_visitor_id=request.visitor_id,
     )
 
     return JsonResponse(
