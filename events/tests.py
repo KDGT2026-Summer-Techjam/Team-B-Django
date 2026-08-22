@@ -100,6 +100,58 @@ class CreateEventTests(TestCase):
                 Event.objects.all().delete()
 
 
+    def test_create_event_saves_visitor_id_as_creator(self):
+        self.client.cookies["visitor_id"] = "creator-a"
+
+        self.post(self.payload)
+
+        self.assertEqual(Event.objects.get().creator_visitor_id, "creator-a")
+
+    def test_create_event_saves_newly_issued_visitor_id_as_creator(self):
+        """Cookieが無い初回アクセスでも、ミドルウェアが発行したvisitor_idを作成者として残す。"""
+        response = self.post(self.payload)
+
+        issued_visitor_id = response.cookies["visitor_id"].value
+        self.assertTrue(issued_visitor_id)
+        self.assertEqual(Event.objects.get().creator_visitor_id, issued_visitor_id)
+
+    def test_creator_can_update_own_event_without_edit_token(self):
+        """作成者は編集トークンを渡さなくても、自分のvisitor_idだけで編集できる。"""
+        self.client.cookies["visitor_id"] = "creator-a"
+        public_id = self.post(self.payload).json()["public_id"]
+
+        response = self.client.patch(
+            f"/api/events/{public_id}",
+            data=json.dumps({"title": "長岡花火大会（雨天順延）"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Event.objects.get().title, "長岡花火大会（雨天順延）")
+
+    def test_creator_can_open_edit_page_without_edit_token(self):
+        self.client.cookies["visitor_id"] = "creator-a"
+        public_id = self.post(self.payload).json()["public_id"]
+
+        response = self.client.get(f"/e/{public_id}/edit")
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_other_visitor_cannot_update_created_event(self):
+        self.client.cookies["visitor_id"] = "creator-a"
+        public_id = self.post(self.payload).json()["public_id"]
+
+        self.client.cookies["visitor_id"] = "visitor-b"
+        response = self.client.patch(
+            f"/api/events/{public_id}",
+            data=json.dumps({"title": "乗っ取り"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(Event.objects.get().title, "長岡花火大会")
+
+
 class GetEventTests(TestCase):
     def setUp(self):
         self.event = Event.objects.create(
