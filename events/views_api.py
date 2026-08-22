@@ -1,14 +1,46 @@
+import base64
+import binascii
 import json
 import secrets
 
 from django.http import HttpResponseNotAllowed, JsonResponse
+from django.utils import timezone
 from django.utils.dateparse import parse_date
 
-from .models import Event, Participant
+from .models import Event, Mission, Participant
 
 # 編集トークンはURLのクエリパラメータで受け取る（docs/設計.md「visitor_idの仕組み」）
 EDIT_TOKEN_PARAM = "edit_token"
 EDITABLE_FIELDS = ("title", "event_date", "location", "organizer_name")
+# ミッションの文言。後から変えたくなったときに1箇所で済むよう定数で持つ
+MISSION_PROMPTS = (
+    "全員で写真を撮る",
+    "みんなで食べたものを撮る",
+    "{season}ならではの1枚を撮る",
+)
+# 季節の区分はdocs/設計.mdの季節エフェクトの表に合わせる
+SEASON_BY_MONTH = {
+    1: "冬",
+    2: "冬",
+    3: "春",
+    4: "春",
+    5: "春",
+    6: "夏",
+    7: "夏",
+    8: "夏",
+    9: "秋",
+    10: "秋",
+    11: "秋",
+    12: "冬",
+}
+# 受け付ける写真の形式。緩くするとdata:text/htmlなどを保存されてしまう
+PHOTO_DATA_URL_PREFIXES = (
+    "data:image/jpeg;base64,",
+    "data:image/png;base64,",
+    "data:image/webp;base64,",
+)
+# Base64文字列の長さで5MB（元画像で約3.75MB相当）
+PHOTO_MAX_LENGTH = 5 * 1024 * 1024
 
 
 def _matches(value, expected):
@@ -24,6 +56,81 @@ def can_edit_event(request, event):
         return True
     return bool(event.creator_visitor_id) and _matches(
         request.visitor_id, event.creator_visitor_id
+    )
+
+
+def create_missions(event):
+    """イベント作成時にミッションを自動生成する。他に登録する手段が無いため。"""
+    season = SEASON_BY_MONTH[event.event_date.month]
+    Mission.objects.bulk_create(
+        [
+            Mission(event=event, order=order, prompt_text=prompt.format(season=season))
+            for order, prompt in enumerate(MISSION_PROMPTS, start=1)
+        ]
+    )
+
+
+def _mission_json(mission):
+    """ミッション1件分のJSONを組み立てる。photoがnullなら未クリア。"""
+    completed_at = mission.completed_at
+    return {
+        "id": mission.id,
+        "order": mission.order,
+        "prompt_text": mission.prompt_text,
+        "photo": mission.photo,
+        "completed_at": (
+            timezone.localtime(completed_at).isoformat() if completed_at else None
+        ),
+    }
+
+
+def _missions_json(event):
+    """ミッション一覧をorderの昇順で返す。未登録のイベントでは空配列になる。"""
+    return [_mission_json(mission) for mission in event.missions.all()]
+
+
+def _is_supported_photo(photo):
+    """data URLの形式と、続きがBase64として復号できることを確かめる。"""
+    # data URLのMIME部分は大文字小文字を区別しない
+    lowered = photo.lower()
+    for prefix in PHOTO_DATA_URL_PREFIXES:
+        if lowered.startswith(prefix):
+            encoded = photo[len(prefix) :]
+            break
+    else:
+        return False
+
+    # 一部のエンコーダが挿入する改行や空白は、復号できるので取り除いて判定する
+    encoded = "".join(encoded.split())
+    if not encoded:
+        return False
+
+    # パディングが省略されていても復号できるように補う
+    encoded += "=" * (-len(encoded) % 4)
+
+    try:
+        base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError):
+        return False
+    return True
+
+
+def can_upload_mission_photo(request, event):
+    """そのイベントの参加者、または作成者だけがミッション写真を登録できる。
+
+    編集トークンは使わない（参加者は持っていないため）。作成者がparticipantsに
+    入っていないことがあるので、参加者と作成者の2条件で判定する。
+    """
+    visitor_id = request.visitor_id
+    # participants.visitor_idはnull許容のため、空のまま絞り込むと誰でも通ってしまう
+    if not visitor_id:
+        return False
+
+    if event.participants.filter(visitor_id=visitor_id).exists():
+        return True
+
+    return bool(event.creator_visitor_id) and _matches(
+        visitor_id, event.creator_visitor_id
     )
 
 
@@ -76,6 +183,7 @@ def create_event(request):
         organizer_name=cleaned_data["organizer_name"],
         creator_visitor_id=request.visitor_id,
     )
+    create_missions(event)
 
     return JsonResponse(
         {
@@ -110,6 +218,7 @@ def get_event(request, public_id):
             "location": event.location,
             "organizer_name": event.organizer_name,
             "participants": participants,
+            "missions": _missions_json(event),
         }
     )
 
@@ -247,6 +356,52 @@ def join_event(request, public_id):
         },
         status=status,
     )
+
+
+def upload_mission_photo(request, public_id, mission_id):
+    """ミッションの写真を登録する。参加者または作成者だけが実行できる。"""
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    try:
+        event = Event.objects.get(public_id=public_id)
+    except Event.DoesNotExist:
+        return JsonResponse({"error": "イベントが見つかりません"}, status=404)
+
+    if not can_upload_mission_photo(request, event):
+        return JsonResponse({"error": "写真を登録する権限がありません"}, status=403)
+
+    # 他のイベントのミッションIDや、数値でないIDを渡された場合も404にする
+    try:
+        mission = event.missions.get(id=mission_id)
+    except (Mission.DoesNotExist, ValueError):
+        return JsonResponse({"error": "ミッションが見つかりません"}, status=404)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"error": "リクエストが不正です"}, status=400)
+
+    if not isinstance(data, dict):
+        return JsonResponse({"error": "リクエストが不正です"}, status=400)
+
+    photo = data.get("photo")
+    if not isinstance(photo, str) or not photo:
+        return JsonResponse({"error": "写真データが空です"}, status=400)
+
+    if len(photo) > PHOTO_MAX_LENGTH:
+        return JsonResponse({"error": "写真のサイズが大きすぎます"}, status=400)
+
+    if not _is_supported_photo(photo):
+        return JsonResponse({"error": "写真の形式が不正です"}, status=400)
+
+    # 1ミッション1枚のため、既に写真があるときは上書きする
+    mission.photo = photo
+    mission.completed_at = timezone.now()
+    mission.save(update_fields=["photo", "completed_at"])
+
+    return JsonResponse(_mission_json(mission))
+
 
 def my_events(request):
     #自分が参加中・作成済みのイベント一覧を返す。
