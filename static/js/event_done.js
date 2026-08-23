@@ -27,6 +27,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                   doneTime.hidden = false;
               }
 
+              // 画像は任意項目のため、設定されている場合のみ表示し、無ければプレースホルダーのままにする
+              const doneImage = document.getElementById('done-image');
+              const doneImagePlaceholder = document.getElementById('done-image-placeholder');
+              if (eventData.image) {
+                  doneImage.src = eventData.image;
+                  doneImage.style.display = 'block';
+                  doneImagePlaceholder.style.display = 'none';
+              }
+
               document.getElementById('done-location').textContent = eventData.location;
               document.getElementById('done-author').textContent = eventData.organizer_name;
 

@@ -66,7 +66,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const imageSection = document.createElement('div');
     imageSection.className = 'image-section';
-    imageSection.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3M19,19H5V5H19V19M13.96,12.29L11.21,15.83L9.25,13.47L6.5,17H17.5L13.96,12.29Z" /></svg>';
+    if (event.image) {
+      // event.imageはBase64のdata URLなのでinnerHTMLではなくimg要素のsrcに設定する
+      const imageEl = document.createElement('img');
+      imageEl.src = event.image;
+      imageEl.alt = 'イベント画像';
+      imageSection.appendChild(imageEl);
+    } else {
+      imageSection.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3M19,19H5V5H19V19M13.96,12.29L11.21,15.83L9.25,13.47L6.5,17H17.5L13.96,12.29Z" /></svg>';
+    }
 
     cardContent.append(textSection, imageSection);
     cardContainer.appendChild(cardContent);

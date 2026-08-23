@@ -569,6 +569,7 @@ def my_events(request):
                     "event_date": event.event_date.isoformat(),
                     "location": event.location,
                     "organizer_name": event.organizer_name,
+                    "image": event.image,
                     "is_participant": event.id in participant_event_ids,
                     "is_creator": event.id in creator_event_ids,
                 }
