@@ -10,6 +10,35 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const inputs = [inputTitle, inputDate, inputTime, inputLocation, inputAuthor];
 
+  // 画像アップロード関連の要素（画像は任意項目のためinputsには含めない）
+  const imageSection = document.getElementById('image-section');
+  const inputImage = document.getElementById('input-image');
+  const imagePreview = document.getElementById('image-preview');
+  const imagePlaceholderIcon = document.getElementById('image-placeholder-icon');
+  let selectedImageDataUrl = null;
+
+  // 画像エリアのクリックでファイル選択ダイアログを開く
+  imageSection.addEventListener('click', () => {
+      inputImage.click();
+  });
+
+  // ファイル選択時にBase64へ変換してプレビュー表示する
+  inputImage.addEventListener('change', () => {
+      const file = inputImage.files[0];
+      if (!file) {
+          return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+          selectedImageDataUrl = reader.result;
+          imagePreview.src = selectedImageDataUrl;
+          imagePreview.style.display = 'block';
+          imagePlaceholderIcon.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+  });
+
   // 開催日の過去日選択不可対応 (min属性に今日の日付をセット)
   const today = new Date().toISOString().split('T')[0];
   inputDate.setAttribute('min', today);
@@ -72,10 +101,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const payload = {
           title: inputTitle.value.trim(),
           event_date: inputDate.value,
-          // ※注意: モデルに時間が無いためバックエンドの仕様によっては inputTime.value は送信不要な場合があります
+          start_time: inputTime.value,
           location: inputLocation.value.trim(),
           organizer_name: inputAuthor.value.trim()
       };
+
+      // 画像は任意項目のため、選択されている場合のみpayloadに含める
+      if (selectedImageDataUrl) {
+          payload.image = selectedImageDataUrl;
+      }
 
       try {
           const response = await fetch('/api/events', {
