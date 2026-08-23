@@ -57,8 +57,10 @@ document.addEventListener("DOMContentLoaded", () => {
     function showError(message) {
         let targetId = "error-title";
 
-        if (message === "日付が不正です") {
+        if (message === "日付が不正です" || message === "過去の日時は指定できません") {
             targetId = "error-date";
+        } else if (message === "時間が不正です") {
+            targetId = "error-time";
         } else if (message === "投稿者名を入力してください") {
             targetId = "error-author";
         } else if (message === "必須項目を入力してください") {
@@ -108,9 +110,10 @@ document.addEventListener("DOMContentLoaded", () => {
             inputLocation.value = data.location;
             inputAuthor.value = data.organizer_name;
 
-            // 表示のみの項目
-            // 現在のAPIには時間がないため空欄のまま
-            inputTime.value = "";
+            // 時間：編集可能（任意項目）
+            // APIは秒付きISO形式("HH:MM:SS")で返すが、input[type=time]は
+            // "HH:MM"でないと未変更のまま再送信した際にサーバー側の検証で弾かれるため切り詰める
+            inputTime.value = data.start_time ? data.start_time.slice(0, 5) : "";
 
             // メンバー
             if (data.participants && data.participants.length > 0) {
@@ -138,6 +141,11 @@ document.addEventListener("DOMContentLoaded", () => {
             location: inputLocation.value.trim(),
             organizer_name: inputAuthor.value.trim(),
         };
+
+        // 時間は任意項目のため、入力されている場合のみpayloadに含める
+        if (inputTime.value) {
+            payload.start_time = inputTime.value;
+        }
 
         try {
             btnComplete.disabled = true;

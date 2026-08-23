@@ -14,7 +14,7 @@
 
     <!-- ヘッダー -->
     <header>
-        <div class="header-title">edit_event.html</div>
+        <div class="header-title">イベント情報更新</div>
     </header>
 
     <!-- サイドバー表示用のトリガー -->
@@ -72,9 +72,11 @@
                             style="color: red; font-size: 12px; margin: 0; display: none;"></p>
                     </div>
 
-                    <!-- 時間：表示のみ -->
+                    <!-- 時間：編集可能（任意項目） -->
                     <div class="input-group">
-                        <input type="text" id="input-time" class="input-time" placeholder="時間" readonly>
+                        <input type="time" id="input-time" class="input-time">
+                        <p class="error-msg" id="error-time"
+                            style="color: red; font-size: 12px; margin: 0; display: none;"></p>
                     </div>
 
                     <!-- 場所：編集可能 -->
