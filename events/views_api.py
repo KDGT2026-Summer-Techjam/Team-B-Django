@@ -5,7 +5,7 @@ import secrets
 
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.utils import timezone
-from django.utils.dateparse import parse_date
+from django.utils.dateparse import parse_date, parse_time
 
 from .models import Event, Mission, Participant
 
@@ -14,7 +14,7 @@ from .models import Event, Mission, Participant
 EDIT_TOKEN_PARAM = "edit_token"
 # 更新APIはURLに載せず、ヘッダかリクエストボディで受け取る
 EDIT_TOKEN_HEADER = "X-Edit-Token"
-EDITABLE_FIELDS = ("title", "event_date", "location", "organizer_name")
+EDITABLE_FIELDS = ("title", "event_date", "location", "organizer_name","start_time",)
 # ミッションの文言。後から変えたくなったときに1箇所で済むよう定数で持つ
 MISSION_PROMPTS = (
     "全員で写真を撮る",
@@ -195,6 +195,20 @@ def create_event(request):
         return JsonResponse({"error": "日付が不正です"}, status=400)
     if event_date is None or event_date.isoformat() != data["event_date"]:
         return JsonResponse({"error": "日付が不正です"}, status=400)
+    
+    start_time = None
+
+    if "start_time" in data:
+        if not isinstance(data["start_time"], str):
+            return JsonResponse({"error": "時間が不正です"}, status=400)
+
+        try:
+            start_time = parse_time(data["start_time"])
+        except ValueError:
+            return JsonResponse({"error": "時間が不正です"}, status=400)
+
+        if start_time is None or start_time.isoformat(timespec="minutes") != data["start_time"]:
+            return JsonResponse({"error": "時間が不正です"}, status=400)
 
     # 作成者のvisitor_idを残す。編集画面の認可と、参加/作成イベントの集計に使う
     event = Event.objects.create(
@@ -203,6 +217,7 @@ def create_event(request):
         location=cleaned_data["location"],
         organizer_name=cleaned_data["organizer_name"],
         creator_visitor_id=request.visitor_id,
+        start_time=start_time,
     )
     Participant.objects.create(
         event=event,
@@ -241,6 +256,7 @@ def get_event(request, public_id):
             "public_id": event.public_id,
             "title": event.title,
             "event_date": event.event_date.isoformat(),
+            "start_time": event.start_time.isoformat() if event.start_time else None,
             "location": event.location,
             "organizer_name": event.organizer_name,
             "participants": participants,
@@ -312,6 +328,25 @@ def update_event(request, public_id):
             return JsonResponse({"error": "日付が不正です"}, status=400)
         cleaned_data["event_date"] = event_date
 
+    if "start_time" in fields:
+        start_time = data["start_time"]
+
+        if not isinstance(start_time, str):
+            return JsonResponse({"error": "時間が不正です"}, status=400)
+
+        try:
+            parsed_start_time = parse_time(start_time)
+        except ValueError:
+            return JsonResponse({"error": "時間が不正です"}, status=400)
+
+        if (
+            parsed_start_time is None
+            or parsed_start_time.isoformat(timespec="minutes") != start_time
+        ):
+            return JsonResponse({"error": "時間が不正です"}, status=400)
+
+        cleaned_data["start_time"] = parsed_start_time
+
     for field, value in cleaned_data.items():
         setattr(event, field, value)
     event.save(update_fields=list(cleaned_data))
@@ -332,6 +367,7 @@ def update_event(request, public_id):
             "public_id": event.public_id,
             "title": event.title,
             "event_date": event.event_date.isoformat(),
+            "start_time": event.start_time.isoformat() if event.start_time else None,
             "location": event.location,
             "organizer_name": event.organizer_name,
             "participants": participants,
