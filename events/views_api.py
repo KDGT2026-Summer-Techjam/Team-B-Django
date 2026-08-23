@@ -14,7 +14,14 @@ from .models import Event, Mission, Participant
 EDIT_TOKEN_PARAM = "edit_token"
 # 更新APIはURLに載せず、ヘッダかリクエストボディで受け取る
 EDIT_TOKEN_HEADER = "X-Edit-Token"
-EDITABLE_FIELDS = ("title", "event_date", "location", "organizer_name","start_time",)
+EDITABLE_FIELDS = (
+    "title",
+    "event_date",
+    "location",
+    "organizer_name",
+    "start_time",
+    "image",
+)
 # ミッションの文言。後から変えたくなったときに1箇所で済むよう定数で持つ
 MISSION_PROMPTS = (
     "全員で写真を撮る",
@@ -136,6 +143,23 @@ def _is_supported_photo(photo):
     return True
 
 
+def _validate_image(image):
+    """イベント画像の形式とサイズを検証し、問題があればエラーレスポンスを返す。
+
+    保存方式・制限はミッション写真と同じなので、判定もそのまま再利用する。
+    """
+    if not isinstance(image, str):
+        return JsonResponse({"error": "画像の形式が不正です"}, status=400)
+
+    if len(image) > PHOTO_MAX_LENGTH:
+        return JsonResponse({"error": "画像のサイズが大きすぎます"}, status=400)
+
+    if not _is_supported_photo(image):
+        return JsonResponse({"error": "画像の形式が不正です"}, status=400)
+
+    return None
+
+
 def can_upload_mission_photo(request, event):
     """そのイベントの参加者、または作成者だけがミッション写真を登録できる。
 
@@ -221,6 +245,13 @@ def create_event(request):
     if _is_past_event_datetime(event_date, start_time):
         return JsonResponse({"error": "過去の日時は指定できません"}, status=400)
 
+    # 画像は任意項目。未指定とnullは画像なしとして扱う
+    image = data.get("image")
+    if image is not None:
+        error = _validate_image(image)
+        if error is not None:
+            return error
+
     # 作成者のvisitor_idを残す。編集画面の認可と、参加/作成イベントの集計に使う
     event = Event.objects.create(
         title=cleaned_data["title"],
@@ -229,6 +260,7 @@ def create_event(request):
         organizer_name=cleaned_data["organizer_name"],
         creator_visitor_id=request.visitor_id,
         start_time=start_time,
+        image=image,
     )
     Participant.objects.create(
         event=event,
@@ -270,6 +302,7 @@ def get_event(request, public_id):
             "start_time": event.start_time.isoformat() if event.start_time else None,
             "location": event.location,
             "organizer_name": event.organizer_name,
+            "image": event.image,
             "participants": participants,
             "missions": _missions_json(event),
         }
@@ -358,6 +391,15 @@ def update_event(request, public_id):
 
         cleaned_data["start_time"] = parsed_start_time
 
+    if "image" in fields:
+        image = data["image"]
+        # nullを送ると画像を外せる
+        if image is not None:
+            error = _validate_image(image)
+            if error is not None:
+                return error
+        cleaned_data["image"] = image
+
     if "event_date" in fields or "start_time" in fields:
         effective_event_date = cleaned_data.get("event_date", event.event_date)
         effective_start_time = cleaned_data.get("start_time", event.start_time)
@@ -387,6 +429,7 @@ def update_event(request, public_id):
             "start_time": event.start_time.isoformat() if event.start_time else None,
             "location": event.location,
             "organizer_name": event.organizer_name,
+            "image": event.image,
             "participants": participants,
         }
     )

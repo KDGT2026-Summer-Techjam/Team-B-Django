@@ -255,6 +255,7 @@ class GetEventTests(TestCase):
                 "start_time": None,
                 "location": "新潟県長岡市",
                 "organizer_name": "田中",
+                "image": None,
                 "participants": [
                     {"id": first.id, "name": "佐藤"},
                     {"id": second.id, "name": "鈴木"},
@@ -556,6 +557,7 @@ class UpdateEventTests(TestCase):
                 "start_time": None,
                 "location": "新潟県長岡市 信濃川河川敷",
                 "organizer_name": "田中太郎",
+                "image": None,
                 "participants": [],
             },
         )
@@ -1323,3 +1325,196 @@ class UploadMissionPhotoTests(TestCase):
 
         self.assertEqual(response.status_code, 405)
         self.assertEqual(response.headers["Allow"], "POST")
+
+
+class CreateEventImageTests(TestCase):
+    """#44: create_eventでのEvent.image（任意項目）の検証。保存方式・上限はMission.photoと同じ。"""
+
+    def setUp(self):
+        self.future_date = timezone.localtime().date() + timedelta(days=1)
+        self.payload = {
+            "title": "画像テストイベント",
+            "event_date": self.future_date.isoformat(),
+            "location": "会場",
+            "organizer_name": "田中",
+        }
+
+    def post(self, payload):
+        return self.client.post(
+            "/api/events",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+    def get_image(self, public_id):
+        response = self.client.get(f"/api/events/{public_id}")
+        return response.json()["image"]
+
+    def test_create_event_with_image_is_saved_and_returned(self):
+        photo = make_photo()
+        self.payload["image"] = photo
+
+        response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 201)
+        public_id = response.json()["public_id"]
+        self.assertEqual(self.get_image(public_id), photo)
+
+    def test_create_event_without_image_defaults_to_none(self):
+        response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 201)
+        public_id = response.json()["public_id"]
+        self.assertIsNone(self.get_image(public_id))
+
+    def test_create_event_with_null_image_is_allowed(self):
+        self.payload["image"] = None
+
+        response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 201)
+        public_id = response.json()["public_id"]
+        self.assertIsNone(self.get_image(public_id))
+
+    def test_create_event_with_non_string_image_returns_400(self):
+        for image in (12345, True, ["x"], {"a": 1}):
+            with self.subTest(image=image):
+                payload = {**self.payload, "image": image}
+
+                response = self.post(payload)
+
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json(), {"error": "画像の形式が不正です"})
+                self.assertFalse(Event.objects.exists())
+
+    def test_create_event_with_non_image_data_url_returns_400(self):
+        self.payload["image"] = make_photo(prefix="data:text/html;base64,")
+
+        response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {"error": "画像の形式が不正です"})
+        self.assertFalse(Event.objects.exists())
+
+    def test_create_event_with_unsupported_image_format_returns_400(self):
+        for prefix in ("data:image/svg+xml;base64,", "data:image/gif;base64,"):
+            with self.subTest(prefix=prefix):
+                payload = {**self.payload, "image": make_photo(prefix=prefix)}
+
+                response = self.post(payload)
+
+                self.assertEqual(response.status_code, 400)
+                self.assertFalse(Event.objects.exists())
+
+    def test_create_event_with_empty_image_returns_400(self):
+        self.payload["image"] = ""
+
+        response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Event.objects.exists())
+
+    def test_create_event_with_oversized_image_returns_400(self):
+        prefix = "data:image/png;base64,"
+        self.payload["image"] = prefix + "A" * (5 * 1024 * 1024)
+
+        response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {"error": "画像のサイズが大きすぎます"})
+        self.assertFalse(Event.objects.exists())
+
+    def test_create_event_with_three_megabyte_image_is_accepted(self):
+        """DATA_UPLOAD_MAX_MEMORY_SIZEを上げていないとDjangoが400を返す。"""
+        photo = make_photo(size=2 * 1024 * 1024)
+        self.assertGreater(len(photo), 2.5 * 1024 * 1024)
+        self.payload["image"] = photo
+
+        response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 201)
+        public_id = response.json()["public_id"]
+        self.assertEqual(self.get_image(public_id), photo)
+
+
+class UpdateEventImageTests(TestCase):
+    """#44: update_eventでのEvent.image更新・nullによるクリアの検証。"""
+
+    def setUp(self):
+        self.event = Event.objects.create(
+            title="画像更新テスト",
+            event_date="2026-08-22",
+            location="会場",
+            organizer_name="田中",
+            creator_visitor_id="creator",
+        )
+        self.client.cookies["visitor_id"] = "creator"
+
+    def patch(self, payload):
+        return self.client.patch(
+            f"/api/events/{self.event.public_id}",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+    def test_update_event_can_set_image(self):
+        photo = make_photo()
+
+        response = self.patch({"image": photo})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["image"], photo)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.image, photo)
+
+    def test_update_event_with_null_clears_image(self):
+        self.event.image = make_photo()
+        self.event.save(update_fields=["image"])
+
+        response = self.patch({"image": None})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["image"])
+        self.event.refresh_from_db()
+        self.assertIsNone(self.event.image)
+
+    def test_update_with_invalid_image_returns_400_and_keeps_existing(self):
+        photo = make_photo()
+        self.event.image = photo
+        self.event.save(update_fields=["image"])
+
+        response = self.patch({"image": make_photo(prefix="data:text/html;base64,")})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {"error": "画像の形式が不正です"})
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.image, photo)
+
+    def test_update_with_non_string_image_returns_400(self):
+        for image in (12345, True, ["x"], {"a": 1}):
+            with self.subTest(image=image):
+                response = self.patch({"image": image})
+
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json(), {"error": "画像の形式が不正です"})
+
+    def test_update_unrelated_field_keeps_existing_image(self):
+        photo = make_photo()
+        self.event.image = photo
+        self.event.save(update_fields=["image"])
+
+        response = self.patch({"organizer_name": "次郎"})
+
+        self.assertEqual(response.status_code, 200)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.image, photo)
+        self.assertEqual(self.event.organizer_name, "次郎")
+
+    def test_update_with_oversized_image_returns_400(self):
+        prefix = "data:image/png;base64,"
+        oversized = prefix + "A" * (5 * 1024 * 1024)
+
+        response = self.patch({"image": oversized})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {"error": "画像のサイズが大きすぎます"})
