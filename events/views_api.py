@@ -204,6 +204,11 @@ def create_event(request):
         organizer_name=cleaned_data["organizer_name"],
         creator_visitor_id=request.visitor_id,
     )
+    Participant.objects.create(
+        event=event,
+        name=cleaned_data["organizer_name"],
+        visitor_id=request.visitor_id,
+    )
     create_missions(event)
 
     return JsonResponse(
@@ -310,6 +315,14 @@ def update_event(request, public_id):
     for field, value in cleaned_data.items():
         setattr(event, field, value)
     event.save(update_fields=list(cleaned_data))
+
+    if "organizer_name" in cleaned_data:
+        Participant.objects.filter(
+        event=event,
+        visitor_id=event.creator_visitor_id,
+    ).update(
+        name=event.organizer_name
+    )
 
     participants = [
         {"id": participant.id, "name": participant.name}
