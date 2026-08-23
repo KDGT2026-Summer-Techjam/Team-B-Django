@@ -155,6 +155,9 @@
       <script>
           document.addEventListener("DOMContentLoaded", () => {
               const publicId = "{{ public_id }}";
+              // 編集トークンはURLのクエリで受け取り、保存時はX-Edit-Tokenヘッダで送る
+              // （URLに載せたまま送らないため）
+              const editToken = new URLSearchParams(window.location.search).get("edit_token");
 
               const btnComplete = document.getElementById("btn-complete");
 
@@ -306,14 +309,20 @@
                   try {
                       btnComplete.disabled = true;
 
+                      const headers = {
+                          "Content-Type": "application/json",
+                          "X-CSRFToken": getCookie("csrftoken")
+                      };
+
+                      if (editToken) {
+                          headers["X-Edit-Token"] = editToken;
+                      }
+
                       const response = await fetch(
                           `/api/events/${publicId}`,
                           {
                               method: "PATCH",
-                              headers: {
-                                  "Content-Type": "application/json",
-                                  "X-CSRFToken": getCookie("csrftoken")
-                              },
+                              headers: headers,
                               body: JSON.stringify(payload)
                           }
                       );

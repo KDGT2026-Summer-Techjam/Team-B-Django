@@ -449,13 +449,12 @@ class UpdateEventTests(TestCase):
         }
 
     def patch(self, payload, token=None):
-        url = f"/api/events/{self.event.public_id}"
-        if token is not None:
-            url = f"{url}?edit_token={token}"
+        headers = {} if token is None else {"X-Edit-Token": token}
         return self.client.patch(
-            url,
+            f"/api/events/{self.event.public_id}",
             data=json.dumps(payload),
             content_type="application/json",
+            headers=headers,
         )
 
     def test_creator_visitor_can_update_event(self):
@@ -480,6 +479,81 @@ class UpdateEventTests(TestCase):
                 "participants": [],
             },
         )
+
+    def test_edit_token_in_query_is_rejected(self):
+        """URLのクエリでトークンを渡す経路は廃止した。"""
+        self.client.cookies["visitor_id"] = "someone-else"
+
+        response = self.client.patch(
+            f"/api/events/{self.event.public_id}?edit_token={self.event.edit_token}",
+            data=json.dumps(self.payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.title, "長岡花火大会")
+
+    def test_edit_token_in_body_allows_update(self):
+        self.client.cookies["visitor_id"] = "someone-else"
+        payload = {**self.payload, "edit_token": self.event.edit_token}
+
+        response = self.client.patch(
+            f"/api/events/{self.event.public_id}",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.title, "長岡花火大会（雨天順延）")
+
+    def test_edit_token_in_body_is_not_saved_as_a_field(self):
+        self.client.cookies["visitor_id"] = "someone-else"
+        before_token = self.event.edit_token
+        payload = {"title": "長岡花火大会2026", "edit_token": before_token}
+
+        response = self.client.patch(
+            f"/api/events/{self.event.public_id}",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.edit_token, before_token)
+        self.assertNotIn("edit_token", response.json())
+
+    def test_non_string_edit_token_in_body_returns_403(self):
+        """ボディは文字列以外も届くため、型が違うトークンは不一致として扱う。"""
+        self.client.cookies["visitor_id"] = "someone-else"
+
+        for token in (12345, True, ["x"], {"a": 1}, None):
+            with self.subTest(token=token):
+                payload = {**self.payload, "edit_token": token}
+
+                response = self.client.patch(
+                    f"/api/events/{self.event.public_id}",
+                    data=json.dumps(payload),
+                    content_type="application/json",
+                )
+
+                self.assertEqual(response.status_code, 403)
+                self.event.refresh_from_db()
+                self.assertEqual(self.event.title, "長岡花火大会")
+
+    def test_edit_token_header_takes_priority_over_body(self):
+        self.client.cookies["visitor_id"] = "someone-else"
+        payload = {**self.payload, "edit_token": "wrong-token"}
+
+        response = self.client.patch(
+            f"/api/events/{self.event.public_id}",
+            data=json.dumps(payload),
+            content_type="application/json",
+            headers={"X-Edit-Token": self.event.edit_token},
+        )
+
+        self.assertEqual(response.status_code, 200)
 
     def test_edit_token_allows_update_from_another_visitor(self):
         self.client.cookies["visitor_id"] = "someone-else"
@@ -663,6 +737,26 @@ class EventEditPageTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "events/event_edit.html")
+
+    def test_edit_page_still_accepts_edit_token_in_query(self):
+        """画面はリンクから開くため、クエリでの受け取りを残している。"""
+        self.client.cookies["visitor_id"] = "someone-else"
+
+        response = self.client.get(
+            f"/e/{self.event.public_id}/edit?edit_token={self.event.edit_token}"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "events/event_edit.html")
+
+    def test_edit_page_sends_edit_token_as_header_on_save(self):
+        self.client.cookies["visitor_id"] = "creator"
+
+        response = self.client.get(f"/e/{self.event.public_id}/edit")
+
+        body = response.content.decode()
+        self.assertIn("X-Edit-Token", body)
+        self.assertNotIn(self.event.edit_token, body)
 
     def test_edit_page_without_permission_returns_error_page_with_403(self):
         self.client.cookies["visitor_id"] = "someone-else"
