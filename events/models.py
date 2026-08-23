@@ -20,8 +20,11 @@ class Event(models.Model):
     )
     title = models.CharField(max_length=255)
     event_date = models.DateField()
+    start_time = models.TimeField(blank=True, null=True)
     location = models.CharField(max_length=255)
     organizer_name = models.CharField(max_length=255)
+    # Base64エンコードした画像データをそのままDBに保存する（Renderの無料プランはディスクが永続化されないため）
+    image = models.TextField(blank=True, null=True)
     edit_token = models.CharField(max_length=64, default=generate_edit_token)
     creator_visitor_id = models.CharField(max_length=64, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

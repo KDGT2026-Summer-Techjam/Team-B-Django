@@ -1,14 +1,69 @@
 document.addEventListener('DOMContentLoaded', () => {
   const btnComplete = document.getElementById('btn-complete');
   
-  // 入力要素
+  // 入力要素（時間は任意項目のためinputsには含めない）
   const inputTitle = document.getElementById('input-title');
   const inputDate = document.getElementById('input-date');
   const inputTime = document.getElementById('input-time');
   const inputLocation = document.getElementById('input-location');
   const inputAuthor = document.getElementById('input-author');
-  
-  const inputs = [inputTitle, inputDate, inputTime, inputLocation, inputAuthor];
+
+  const inputs = [inputTitle, inputDate, inputLocation, inputAuthor];
+
+  // 画像アップロード関連の要素（画像は任意項目のためinputsには含めない）
+  // 受け付ける形式・サイズ上限はevents/views_api.pyのPHOTO_DATA_URL_PREFIXES・PHOTO_MAX_LENGTHと合わせる
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  const IMAGE_MAX_LENGTH = 5 * 1024 * 1024;
+  const imageSection = document.getElementById('image-section');
+  const inputImage = document.getElementById('input-image');
+  const imagePreview = document.getElementById('image-preview');
+  const imagePlaceholderIcon = document.getElementById('image-placeholder-icon');
+  const errorImage = document.getElementById('error-image');
+  let selectedImageDataUrl = null;
+
+  // 画像エリアのクリックでファイル選択ダイアログを開く
+  imageSection.addEventListener('click', () => {
+      inputImage.click();
+  });
+
+  function showImageError(message) {
+      errorImage.textContent = message;
+      errorImage.style.display = 'block';
+      inputImage.value = '';
+  }
+
+  // ファイル選択時に形式・サイズを検証し、Base64へ変換してプレビュー表示する
+  inputImage.addEventListener('change', () => {
+      const file = inputImage.files[0];
+      if (!file) {
+          return;
+      }
+
+      errorImage.style.display = 'none';
+      errorImage.textContent = '';
+
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+          showImageError('対応していない画像形式です（JPEG/PNG/WEBPのみ）');
+          return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+          const dataUrl = reader.result;
+          if (dataUrl.length > IMAGE_MAX_LENGTH) {
+              showImageError('画像のサイズが大きすぎます（5MB以下にしてください）');
+              return;
+          }
+          selectedImageDataUrl = dataUrl;
+          imagePreview.src = selectedImageDataUrl;
+          imagePreview.style.display = 'block';
+          imagePlaceholderIcon.style.display = 'none';
+      };
+      reader.onerror = () => {
+          showImageError('画像の読み込みに失敗しました');
+      };
+      reader.readAsDataURL(file);
+  });
 
   // 開催日の過去日選択不可対応 (min属性に今日の日付をセット)
   const today = new Date().toISOString().split('T')[0];
@@ -72,10 +127,17 @@ document.addEventListener('DOMContentLoaded', () => {
       const payload = {
           title: inputTitle.value.trim(),
           event_date: inputDate.value,
-          // ※注意: モデルに時間が無いためバックエンドの仕様によっては inputTime.value は送信不要な場合があります
           location: inputLocation.value.trim(),
           organizer_name: inputAuthor.value.trim()
       };
+
+      // 時間・画像はともに任意項目のため、入力されている場合のみpayloadに含める
+      if (inputTime.value) {
+          payload.start_time = inputTime.value;
+      }
+      if (selectedImageDataUrl) {
+          payload.image = selectedImageDataUrl;
+      }
 
       try {
           const response = await fetch('/api/events', {

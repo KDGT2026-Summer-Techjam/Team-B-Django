@@ -166,12 +166,18 @@ header {
     gap: 12px;
 }
 
+.image-upload {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 30px;
+}
+
 .image-section {
     width: 320px;
     height: 320px;
     background-color: #EEEEEE;
     display: flex;
-    margin-top: 30px;
     justify-content: center;
     align-items: center;
     border-radius: 10px;
@@ -182,6 +188,13 @@ header {
     width: 80px;
     height: 80px;
     fill: #888888;
+}
+
+.image-section img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
 }
 
 /* ================================
