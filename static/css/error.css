@@ -1,0 +1,34 @@
+/* ================================
+   エラーページ専用スタイル
+================================ */
+
+.text-conteainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+}
+
+/* ホームへ戻るボタン（本文の下に通常配置） */
+.btn-home-return {
+    margin-top: 24px;
+    background-color: #EC8A76;
+    color: white;
+    border: none;
+    padding: 8px 30px;
+    border-radius: 10px;
+    font-size: 16px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-home-return:hover {
+    background-color: #d97864;
+}
+
+.btn-home-return:active {
+    transform: scale(0.95);
+}
