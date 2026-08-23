@@ -255,6 +255,7 @@ class GetEventTests(TestCase):
                 "start_time": None,
                 "location": "新潟県長岡市",
                 "organizer_name": "田中",
+                "image": None,
                 "participants": [
                     {"id": first.id, "name": "佐藤"},
                     {"id": second.id, "name": "鈴木"},
@@ -556,6 +557,7 @@ class UpdateEventTests(TestCase):
                 "start_time": None,
                 "location": "新潟県長岡市 信濃川河川敷",
                 "organizer_name": "田中太郎",
+                "image": None,
                 "participants": [],
             },
         )
