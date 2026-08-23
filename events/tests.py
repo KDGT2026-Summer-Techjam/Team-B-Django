@@ -1,7 +1,9 @@
 import base64
 import json
 from datetime import date
+from pathlib import Path
 
+from django.conf import settings
 from django.test import TestCase
 
 from .models import Event, Mission, Participant
@@ -802,8 +804,14 @@ class EventEditPageTests(TestCase):
         response = self.client.get(f"/e/{self.event.public_id}/edit")
 
         body = response.content.decode()
-        self.assertIn("X-Edit-Token", body)
+        self.assertIn('src="/static/js/event_edit.js"', body)
         self.assertNotIn(self.event.edit_token, body)
+
+        # 実際にヘッダーへ編集トークンをセットしているかはevent_edit.js側のロジックで検証する
+        event_edit_js = (
+            Path(settings.BASE_DIR) / "static" / "js" / "event_edit.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn('headers["X-Edit-Token"] = editToken', event_edit_js)
 
     def test_edit_page_without_permission_returns_error_page_with_403(self):
         self.client.cookies["visitor_id"] = "someone-else"
