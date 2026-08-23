@@ -318,11 +318,9 @@ def update_event(request, public_id):
 
     if "organizer_name" in cleaned_data:
         Participant.objects.filter(
-        event=event,
-        visitor_id=event.creator_visitor_id,
-    ).update(
-        name=event.organizer_name
-    )
+            event=event,
+            visitor_id=event.creator_visitor_id,
+        ).update(name=event.organizer_name)
 
     participants = [
         {"id": participant.id, "name": participant.name}
