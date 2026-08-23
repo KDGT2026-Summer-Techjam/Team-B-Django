@@ -152,6 +152,31 @@ class CreateEventTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(Event.objects.get().title, "長岡花火大会")
 
+    def test_create_event_registers_creator_as_participant(self):
+        """作成者自身も参加者一覧に含まれるよう、Participantとして登録する。"""
+        self.client.cookies["visitor_id"] = "creator-a"
+
+        self.post(self.payload)
+
+        participant = Participant.objects.get()
+        self.assertEqual(participant.name, "田中")
+        self.assertEqual(participant.visitor_id, "creator-a")
+        self.assertEqual(participant.event, Event.objects.get())
+
+    def test_creator_joining_own_event_does_not_duplicate_participant(self):
+        """作成者が改めて参加登録しても、同一visitor_idなので重複登録されない。"""
+        self.client.cookies["visitor_id"] = "creator-a"
+        public_id = self.post(self.payload).json()["public_id"]
+
+        response = self.client.post(
+            f"/api/events/{public_id}/participants",
+            data=json.dumps({"name": "田中"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Participant.objects.count(), 1)
+
 
 class GetEventTests(TestCase):
     def setUp(self):
@@ -602,6 +627,28 @@ class UpdateEventTests(TestCase):
         self.assertIn("error", response.json())
         self.event.refresh_from_db()
         self.assertEqual(self.event.title, "長岡花火大会")
+
+    def test_organizer_name_update_renames_creator_participant(self):
+        """organizer_nameを変更すると、作成者のParticipantの名前も追従する。"""
+        self.client.cookies["visitor_id"] = "creator"
+        participant = Participant.objects.create(
+            event=self.event, name="田中", visitor_id="creator"
+        )
+
+        response = self.patch({"organizer_name": "田中太郎"})
+
+        self.assertEqual(response.status_code, 200)
+        participant.refresh_from_db()
+        self.assertEqual(participant.name, "田中太郎")
+
+    def test_organizer_name_update_without_creator_participant_does_not_error(self):
+        """このPR適用前に作成された(Participant未登録の)イベントを編集してもエラーにならない。"""
+        self.client.cookies["visitor_id"] = "creator"
+
+        response = self.patch({"organizer_name": "田中太郎"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Participant.objects.count(), 0)
 
     def test_update_with_wrong_token_returns_403(self):
         self.client.cookies["visitor_id"] = "someone-else"
