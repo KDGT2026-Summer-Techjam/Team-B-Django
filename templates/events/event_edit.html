@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="{% static 'css/common.css' %}">
 </head>
 
-<body>
+<body data-public-id="{{ public_id }}">
     {% csrf_token %}
 
     <!-- ヘッダー -->
@@ -113,13 +113,6 @@
         </div>
     </div>
 
-    <!--  -->
-    <script>
-        // JSファイルに渡すための変数
-        const EVENT_PUBLIC_ID = "{{ public_id }}";
-        // 編集トークンはURLのクエリで受け取り、保存時はX-Edit-Tokenヘッダで送る
-        // ↑の一文がないと、python manage.py test events の23番目のテストが通らない。"X-Edit-Token"が HTMLのbodyに含まれているかテストしてるっぽい。
-    </script>
     <script src="{% static 'js/script.js' %}"></script>
     <script src="{% static 'js/event_edit.js' %}"></script>
 </body>

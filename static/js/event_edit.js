@@ -1,5 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const publicId = EVENT_PUBLIC_ID;
+    const body = document.body;
+    const publicId = body.dataset.publicId;
+    if (!publicId) {
+        return;
+    }
     // 編集トークンはURLのクエリで受け取り、保存時はX-Edit-Tokenヘッダで送る
     // （URLに載せたまま送らないため）
     const editToken = new URLSearchParams(window.location.search).get(
@@ -26,26 +30,26 @@ document.addEventListener("DOMContentLoaded", () => {
         let cookieValue = null;
 
         if (document.cookie && document.cookie !== "") {
-        const cookies = document.cookie.split(";");
+            const cookies = document.cookie.split(";");
 
-        for (let cookie of cookies) {
-            cookie = cookie.trim();
+            for (let cookie of cookies) {
+                cookie = cookie.trim();
 
-            if (cookie.substring(0, name.length + 1) === name + "=") {
-            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-            break;
+                if (cookie.substring(0, name.length + 1) === name + "=") {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
             }
         }
-    }
 
-    return cookieValue;
+        return cookieValue;
     }
 
     // エラーを消す
     function clearErrors() {
-    document.querySelectorAll(".error-msg").forEach((element) => {
-        element.textContent = "";
-        element.style.display = "none";
+        document.querySelectorAll(".error-msg").forEach((element) => {
+            element.textContent = "";
+            element.style.display = "none";
         });
     }
 
@@ -129,49 +133,49 @@ document.addEventListener("DOMContentLoaded", () => {
         clearErrors();
 
         const payload = {
-        title: inputTitle.value.trim(),
-        event_date: inputDate.value,
-        location: inputLocation.value.trim(),
-        organizer_name: inputAuthor.value.trim(),
+            title: inputTitle.value.trim(),
+            event_date: inputDate.value,
+            location: inputLocation.value.trim(),
+            organizer_name: inputAuthor.value.trim(),
         };
 
-    try {
-        btnComplete.disabled = true;
+        try {
+            btnComplete.disabled = true;
 
-        const headers = {
-            "Content-Type": "application/json",
-            "X-CSRFToken": getCookie("csrftoken"),
-        };
+            const headers = {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken"),
+            };
 
-        if (editToken) {
-            headers["X-Edit-Token"] = editToken;
-        }
+            if (editToken) {
+                headers["X-Edit-Token"] = editToken;
+            }
 
-        const response = await fetch(`/api/events/${publicId}`, {
-            method: "PATCH",
-            headers: headers,
-            body: JSON.stringify(payload),
-        });
+            const response = await fetch(`/api/events/${publicId}`, {
+                method: "PATCH",
+                headers: headers,
+                body: JSON.stringify(payload),
+            });
 
-        if (response.ok) {
-            window.location.href = `/e/${publicId}/`;
-            return;
-        }
+            if (response.ok) {
+                window.location.href = `/e/${publicId}/`;
+                return;
+            }
 
-        const errorData = await response.json();
+            const errorData = await response.json();
 
-        if (errorData.error) {
-            showError(errorData.error);
-        }
+            if (errorData.error) {
+                showError(errorData.error);
+            }
 
-        validateForm();
-    } catch (error) {
-        console.error("API Error:", error);
-        showError("通信エラーが発生しました。");
-        validateForm();
+            validateForm();
+        } catch (error) {
+            console.error("API Error:", error);
+            showError("通信エラーが発生しました。");
+            validateForm();
         }
     });
 
     // ページ読み込み時にイベント情報を取得
     loadEvent();
-    });
+});
