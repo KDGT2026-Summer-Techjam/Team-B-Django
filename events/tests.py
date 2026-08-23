@@ -517,9 +517,10 @@ class UpdateEventTests(TestCase):
             organizer_name="田中",
             creator_visitor_id="creator",
         )
+        self.updated_event_date = timezone.localtime().date() + timedelta(days=1)
         self.payload = {
             "title": "長岡花火大会（雨天順延）",
-            "event_date": "2026-08-23",
+            "event_date": self.updated_event_date.isoformat(),
             "location": "新潟県長岡市 信濃川河川敷",
             "organizer_name": "田中太郎",
         }
@@ -541,7 +542,7 @@ class UpdateEventTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.event.refresh_from_db()
         self.assertEqual(self.event.title, "長岡花火大会（雨天順延）")
-        self.assertEqual(self.event.event_date, date(2026, 8, 23))
+        self.assertEqual(self.event.event_date, self.updated_event_date)
         self.assertEqual(self.event.location, "新潟県長岡市 信濃川河川敷")
         self.assertEqual(self.event.organizer_name, "田中太郎")
         self.assertEqual(
@@ -549,7 +550,7 @@ class UpdateEventTests(TestCase):
             {
                 "public_id": self.event.public_id,
                 "title": "長岡花火大会（雨天順延）",
-                "event_date": "2026-08-23",
+                "event_date": self.updated_event_date.isoformat(),
                 "start_time": None,
                 "location": "新潟県長岡市 信濃川河川敷",
                 "organizer_name": "田中太郎",
