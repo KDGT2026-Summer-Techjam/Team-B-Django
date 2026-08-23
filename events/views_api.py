@@ -155,6 +155,14 @@ def can_upload_mission_photo(request, event):
     )
 
 
+def _is_past_event_datetime(event_date, start_time):
+    """イベント日時が現在時刻より過去かどうかを判定する。start_time未設定なら日付のみで判定する。"""
+    now = timezone.localtime()
+    if event_date < now.date():
+        return True
+    return event_date == now.date() and start_time is not None and start_time < now.time()
+
+
 def create_event(request):
     """イベントを作成し、共有に必要な情報を返す。"""
     if request.method != "POST":
@@ -209,6 +217,9 @@ def create_event(request):
 
         if start_time is None or start_time.isoformat(timespec="minutes") != data["start_time"]:
             return JsonResponse({"error": "時間が不正です"}, status=400)
+
+    if _is_past_event_datetime(event_date, start_time):
+        return JsonResponse({"error": "過去の日時は指定できません"}, status=400)
 
     # 作成者のvisitor_idを残す。編集画面の認可と、参加/作成イベントの集計に使う
     event = Event.objects.create(
@@ -346,6 +357,12 @@ def update_event(request, public_id):
             return JsonResponse({"error": "時間が不正です"}, status=400)
 
         cleaned_data["start_time"] = parsed_start_time
+
+    if "event_date" in fields or "start_time" in fields:
+        effective_event_date = cleaned_data.get("event_date", event.event_date)
+        effective_start_time = cleaned_data.get("start_time", event.start_time)
+        if _is_past_event_datetime(effective_event_date, effective_start_time):
+            return JsonResponse({"error": "過去の日時は指定できません"}, status=400)
 
     for field, value in cleaned_data.items():
         setattr(event, field, value)
