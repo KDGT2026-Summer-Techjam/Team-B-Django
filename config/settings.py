@@ -3,6 +3,7 @@ Django settings for config project.
 """
 
 import os
+import sys
 from pathlib import Path
 
 import dj_database_url
@@ -81,9 +82,16 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+# テスト実行時はDjangoがDEBUGを強制的にFalseにするため、
+# collectstatic未実行の環境ではCompressedManifestStaticFilesStorageが
+# manifestを参照できずエラーになる。テスト時だけmanifest不要のstorageに切り替える
 STORAGES = {
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if "test" in sys.argv
+            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        ),
     },
 }
 

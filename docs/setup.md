@@ -146,6 +146,16 @@ python manage.py runserver
 
 ---
 
+## 7. テストを実行する
+
+```bash
+python manage.py test
+```
+
+エラーが出ずに完了すれば成功です。PRを作成する前に必ず実行してください。
+
+---
+
 ## よくある詰まり
 
 ### `ModuleNotFoundError: No module named 'django'`
