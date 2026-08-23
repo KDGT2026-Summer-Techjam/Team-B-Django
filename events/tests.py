@@ -1,19 +1,29 @@
 import base64
 import json
-from datetime import date
+from datetime import date, datetime, timedelta
+from unittest.mock import patch
 from pathlib import Path
 
 from django.conf import settings
 from django.test import TestCase
+from django.utils import timezone
 
 from .models import Event, Mission, Participant
 
 
+def future_date_str(month, day):
+    """指定した月日のうち、今日より後になる直近の年の日付文字列を返す。季節判定テストで過去日付を避けるために使う。"""
+    today = timezone.localtime().date()
+    year = today.year if date(today.year, month, day) > today else today.year + 1
+    return date(year, month, day).isoformat()
+
+
 class CreateEventTests(TestCase):
     def setUp(self):
+        self.future_date = timezone.localtime().date() + timedelta(days=1)
         self.payload = {
             "title": "長岡花火大会",
-            "event_date": "2026-08-22",
+            "event_date": self.future_date.isoformat(),
             "location": "新潟県長岡市",
             "organizer_name": "田中",
         }
@@ -31,7 +41,7 @@ class CreateEventTests(TestCase):
         self.assertEqual(response.status_code, 201)
         event = Event.objects.get()
         self.assertEqual(event.title, "長岡花火大会")
-        self.assertEqual(event.event_date, date(2026, 8, 22))
+        self.assertEqual(event.event_date, self.future_date)
         self.assertEqual(event.location, "新潟県長岡市")
         self.assertEqual(event.organizer_name, "田中")
         self.assertEqual(
@@ -69,6 +79,46 @@ class CreateEventTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("error", response.json())
         self.assertFalse(Event.objects.exists())
+
+    def test_past_event_date_returns_400(self):
+        self.payload["event_date"] = (self.future_date - timedelta(days=2)).isoformat()
+
+        response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+        self.assertFalse(Event.objects.exists())
+
+    def test_today_with_past_start_time_returns_400(self):
+        fixed_now = timezone.make_aware(datetime(2026, 8, 23, 12, 0))
+        with patch("events.views_api.timezone.localtime", return_value=fixed_now):
+            self.payload["event_date"] = fixed_now.date().isoformat()
+            self.payload["start_time"] = "09:00"
+
+            response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+        self.assertFalse(Event.objects.exists())
+
+    def test_today_with_future_start_time_returns_201(self):
+        fixed_now = timezone.make_aware(datetime(2026, 8, 23, 12, 0))
+        with patch("events.views_api.timezone.localtime", return_value=fixed_now):
+            self.payload["event_date"] = fixed_now.date().isoformat()
+            self.payload["start_time"] = "18:00"
+
+            response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 201)
+
+    def test_today_without_start_time_is_allowed(self):
+        fixed_now = timezone.make_aware(datetime(2026, 8, 23, 12, 0))
+        with patch("events.views_api.timezone.localtime", return_value=fixed_now):
+            self.payload["event_date"] = fixed_now.date().isoformat()
+
+            response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 201)
 
     def test_empty_organizer_name_returns_400(self):
         self.payload["organizer_name"] = "   "
@@ -469,9 +519,10 @@ class UpdateEventTests(TestCase):
             organizer_name="田中",
             creator_visitor_id="creator",
         )
+        self.updated_event_date = timezone.localtime().date() + timedelta(days=1)
         self.payload = {
             "title": "長岡花火大会（雨天順延）",
-            "event_date": "2026-08-23",
+            "event_date": self.updated_event_date.isoformat(),
             "location": "新潟県長岡市 信濃川河川敷",
             "organizer_name": "田中太郎",
         }
@@ -493,7 +544,7 @@ class UpdateEventTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.event.refresh_from_db()
         self.assertEqual(self.event.title, "長岡花火大会（雨天順延）")
-        self.assertEqual(self.event.event_date, date(2026, 8, 23))
+        self.assertEqual(self.event.event_date, self.updated_event_date)
         self.assertEqual(self.event.location, "新潟県長岡市 信濃川河川敷")
         self.assertEqual(self.event.organizer_name, "田中太郎")
         self.assertEqual(
@@ -501,7 +552,7 @@ class UpdateEventTests(TestCase):
             {
                 "public_id": self.event.public_id,
                 "title": "長岡花火大会（雨天順延）",
-                "event_date": "2026-08-23",
+                "event_date": self.updated_event_date.isoformat(),
                 "start_time": None,
                 "location": "新潟県長岡市 信濃川河川敷",
                 "organizer_name": "田中太郎",
@@ -610,6 +661,52 @@ class UpdateEventTests(TestCase):
         self.assertEqual(self.event.title, "長岡花火大会2026")
         self.assertEqual(self.event.location, "新潟県長岡市")
         self.assertEqual(self.event.event_date, date(2026, 8, 22))
+
+    def test_update_event_date_to_past_returns_400(self):
+        self.client.cookies["visitor_id"] = "creator"
+        past_date = (timezone.localtime().date() - timedelta(days=1)).isoformat()
+
+        response = self.patch({"event_date": past_date})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.event_date, date(2026, 8, 22))
+
+    def test_update_start_time_to_past_on_today_returns_400(self):
+        self.client.cookies["visitor_id"] = "creator"
+        self.event.event_date = date(2026, 8, 23)
+        self.event.save(update_fields=["event_date"])
+        fixed_now = timezone.make_aware(datetime(2026, 8, 23, 12, 0))
+
+        with patch("events.views_api.timezone.localtime", return_value=fixed_now):
+            response = self.patch({"start_time": "09:00"})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+
+    def test_update_start_time_to_future_on_today_succeeds(self):
+        self.client.cookies["visitor_id"] = "creator"
+        self.event.event_date = date(2026, 8, 23)
+        self.event.save(update_fields=["event_date"])
+        fixed_now = timezone.make_aware(datetime(2026, 8, 23, 12, 0))
+
+        with patch("events.views_api.timezone.localtime", return_value=fixed_now):
+            response = self.patch({"start_time": "18:00"})
+
+        self.assertEqual(response.status_code, 200)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.start_time.isoformat(timespec="minutes"), "18:00")
+
+    def test_update_unrelated_field_on_past_event_succeeds(self):
+        """event_dateが既に過去でも、event_date/start_timeを変更しない更新は拒否されない。"""
+        self.client.cookies["visitor_id"] = "creator"
+        fixed_now = timezone.make_aware(datetime(2026, 8, 23, 12, 0))
+
+        with patch("events.views_api.timezone.localtime", return_value=fixed_now):
+            response = self.patch({"organizer_name": "田中太郎"})
+
+        self.assertEqual(response.status_code, 200)
 
     def test_update_returns_participants(self):
         self.client.cookies["visitor_id"] = "creator"
@@ -890,7 +987,7 @@ class CreateEventMissionTests(TestCase):
         )
 
     def test_create_event_generates_three_missions(self):
-        response = self.post("2026-08-22")
+        response = self.post(future_date_str(8, 22))
 
         self.assertEqual(response.status_code, 201)
         event = Event.objects.get()
@@ -906,7 +1003,7 @@ class CreateEventMissionTests(TestCase):
         )
 
     def test_generated_missions_start_uncleared(self):
-        self.post("2026-08-22")
+        self.post(future_date_str(8, 22))
 
         event = Event.objects.get()
         for mission in event.missions.all():
@@ -915,11 +1012,11 @@ class CreateEventMissionTests(TestCase):
 
     def test_third_mission_uses_season_of_event_date(self):
         cases = {
-            "2026-04-05": "春ならではの1枚を撮る",
-            "2026-08-22": "夏ならではの1枚を撮る",
-            "2026-10-01": "秋ならではの1枚を撮る",
-            "2026-12-24": "冬ならではの1枚を撮る",
-            "2027-01-10": "冬ならではの1枚を撮る",
+            future_date_str(4, 5): "春ならではの1枚を撮る",
+            future_date_str(8, 22): "夏ならではの1枚を撮る",
+            future_date_str(10, 1): "秋ならではの1枚を撮る",
+            future_date_str(12, 24): "冬ならではの1枚を撮る",
+            future_date_str(1, 10): "冬ならではの1枚を撮る",
         }
         for event_date, expected in cases.items():
             with self.subTest(event_date=event_date):
