@@ -9,8 +9,11 @@ from django.utils.dateparse import parse_date
 
 from .models import Event, Mission, Participant
 
-# 編集トークンはURLのクエリパラメータで受け取る（docs/設計.md「visitor_idの仕組み」）
+# 編集画面の表示はURLのクエリパラメータで編集トークンを受け取る
+# （docs/設計.md「visitor_idの仕組み」）
 EDIT_TOKEN_PARAM = "edit_token"
+# 更新APIはURLに載せず、ヘッダかリクエストボディで受け取る
+EDIT_TOKEN_HEADER = "X-Edit-Token"
 EDITABLE_FIELDS = ("title", "event_date", "location", "organizer_name")
 # ミッションの文言。後から変えたくなったときに1箇所で済むよう定数で持つ
 MISSION_PROMPTS = (
@@ -50,13 +53,31 @@ def _matches(value, expected):
     return secrets.compare_digest(value.encode(), expected.encode())
 
 
-def can_edit_event(request, event):
-    """編集トークンの一致、または作成者のvisitor_idの一致で編集を許可する。"""
-    if _matches(request.GET.get(EDIT_TOKEN_PARAM), event.edit_token):
+def can_edit_event(request, event, edit_token):
+    """編集トークンの一致、または作成者のvisitor_idの一致で編集を許可する。
+
+    トークンをどこから読むかは呼び出し側で決める。編集画面の表示はURLのクエリ、
+    更新APIはヘッダかリクエストボディで受け取る。
+    """
+    if _matches(edit_token, event.edit_token):
         return True
     return bool(event.creator_visitor_id) and _matches(
         request.visitor_id, event.creator_visitor_id
     )
+
+
+def _update_edit_token(request, data):
+    """更新APIの編集トークンを読む。ヘッダを優先し、無ければボディを見る。
+
+    URLのクエリは見ない。履歴やRefererからトークンが漏れるため。
+    """
+    header_token = request.headers.get(EDIT_TOKEN_HEADER)
+    if header_token:
+        return header_token
+
+    # ボディはJSONなので文字列以外の値も届く
+    body_token = data.get(EDIT_TOKEN_PARAM)
+    return body_token if isinstance(body_token, str) else None
 
 
 def create_missions(event):
@@ -239,9 +260,7 @@ def update_event(request, public_id):
     except Event.DoesNotExist:
         return JsonResponse({"error": "イベントが見つかりません"}, status=404)
 
-    if not can_edit_event(request, event):
-        return JsonResponse({"error": "編集する権限がありません"}, status=403)
-
+    # トークンをボディからも読むため、認可判定より先に読み取る
     try:
         data = json.loads(request.body)
     except (json.JSONDecodeError, UnicodeDecodeError):
@@ -249,6 +268,9 @@ def update_event(request, public_id):
 
     if not isinstance(data, dict):
         return JsonResponse({"error": "リクエストが不正です"}, status=400)
+
+    if not can_edit_event(request, event, _update_edit_token(request, data)):
+        return JsonResponse({"error": "編集する権限がありません"}, status=403)
 
     fields = [field for field in EDITABLE_FIELDS if field in data]
     if not fields:
