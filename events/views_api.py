@@ -331,21 +331,21 @@ def update_event(request, public_id):
     if "start_time" in fields:
         start_time = data["start_time"]
 
-    if not isinstance(start_time, str):
-        return JsonResponse({"error": "時間が不正です"}, status=400)
+        if not isinstance(start_time, str):
+            return JsonResponse({"error": "時間が不正です"}, status=400)
 
-    try:
-        parsed_start_time = parse_time(start_time)
-    except ValueError:
-        return JsonResponse({"error": "時間が不正です"}, status=400)
+        try:
+            parsed_start_time = parse_time(start_time)
+        except ValueError:
+            return JsonResponse({"error": "時間が不正です"}, status=400)
 
-    if (
-        parsed_start_time is None
-        or parsed_start_time.isoformat(timespec="minutes") != start_time
-    ):
-        return JsonResponse({"error": "時間が不正です"}, status=400)
+        if (
+            parsed_start_time is None
+            or parsed_start_time.isoformat(timespec="minutes") != start_time
+        ):
+            return JsonResponse({"error": "時間が不正です"}, status=400)
 
-    cleaned_data["start_time"] = parsed_start_time
+        cleaned_data["start_time"] = parsed_start_time
 
     for field, value in cleaned_data.items():
         setattr(event, field, value)
