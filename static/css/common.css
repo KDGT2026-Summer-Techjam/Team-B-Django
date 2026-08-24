@@ -29,6 +29,7 @@ header {
     left: 0;
     width: 100%;
     z-index: 10;
+    display: flex;
 }
 
 .header-title {
@@ -65,6 +66,26 @@ header {
     box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
 }
 
+/* ハンバーガーボタンのCSS */
+.hamburger {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 30px;
+    height: 22px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin-right: 10px;
+}
+
+.hamburger span {
+    width: 90%;
+    height: 4px;
+    background-color: #AAA;
+    border-radius: 1px;
+}
 /* JSでこのクラスが付与された時に表示される */
 .sidebar.open {
     transform: translateX(0);
