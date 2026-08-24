@@ -24,37 +24,52 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnShare = document.getElementById('btn-share');
   const btnReturn = document.getElementById('btn-return');
 
-  // コピー完了時に一瞬「コピーしました」と表示するフィードバック
-  const showCopyFeedback = (button) => {
-      const originalTitle = button.title;
+  // コピー完了を示すチェックマークアイコン（ホバーしなくても見た目で分かるようにする）
+  const CHECK_ICON_SVG = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+
+  // 元のtitle/アイコンはクリックされる前に確定させておく。
+  // showCopyFeedback内でbutton.titleを読み直すと、連打時に「コピーしました」状態を
+  // 元の値として誤って記憶し、表示が固定されたまま戻らなくなる
+  const captureOriginalState = (button) =>
+      button ? { title: button.title, icon: button.innerHTML } : null;
+  const copyFeedbackTimers = new WeakMap();
+
+  // コピー完了時に一瞬アイコンをチェックマークに切り替えるフィードバック
+  const showCopyFeedback = (button, original) => {
+      clearTimeout(copyFeedbackTimers.get(button));
       button.title = 'コピーしました';
+      button.innerHTML = CHECK_ICON_SVG;
       button.classList.add('icon-btn--done');
-      setTimeout(() => {
-          button.title = originalTitle;
+      const timerId = setTimeout(() => {
+          button.title = original.title;
+          button.innerHTML = original.icon;
           button.classList.remove('icon-btn--done');
       }, 1500);
+      copyFeedbackTimers.set(button, timerId);
   };
 
   // event_done.js が組み立てた共有用テキスト・URLをクリップボードにコピーする
-  const copyShareTextToClipboard = async (button) => {
+  const copyShareTextToClipboard = async (button, original) => {
       const shareText = window.eventShareText || '';
       const shareUrl = window.eventShareUrl || window.location.href;
       try {
           await navigator.clipboard.writeText(`${shareText}\n\n${shareUrl}`);
-          showCopyFeedback(button);
+          showCopyFeedback(button, original);
       } catch (error) {
           console.error('クリップボードへのコピーに失敗しました:', error);
       }
   };
 
   // コピーボタンの処理
+  const btnCopyOriginal = captureOriginalState(btnCopy);
   if (btnCopy) {
       btnCopy.addEventListener('click', () => {
-          copyShareTextToClipboard(btnCopy);
+          copyShareTextToClipboard(btnCopy, btnCopyOriginal);
       });
   }
 
   // シェアボタンの処理（Web Share API非対応環境ではコピーにフォールバック）
+  const btnShareOriginal = captureOriginalState(btnShare);
   if (btnShare) {
       btnShare.addEventListener('click', async () => {
           const shareData = {
@@ -73,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   }
               }
           } else {
-              copyShareTextToClipboard(btnShare);
+              copyShareTextToClipboard(btnShare, btnShareOriginal);
           }
       });
   }
