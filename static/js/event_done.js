@@ -39,6 +39,12 @@ document.addEventListener('DOMContentLoaded', async () => {
               document.getElementById('done-location').textContent = eventData.location;
               document.getElementById('done-author').textContent = eventData.organizer_name;
 
+              // コピー・シェアボタン（script.js）に渡す共有用テキストとURLを組み立てる
+              // event_date は "YYYY-MM-DD" 形式のため、月・日を取り出して定型文に埋め込む
+              const [, month, day] = eventData.event_date.split('-').map(Number);
+              window.eventShareText = `${month}月${day}日は空いてる？みんなで一緒に${eventData.title}に行こう！`;
+              window.eventShareUrl = `${window.location.origin}/e/${publicId}`;
+
               // 4. メンバーのリスト処理
               const membersContainer = document.getElementById('done-members');
               membersContainer.innerHTML = ''; // 「読み込み中...」の文字をクリア

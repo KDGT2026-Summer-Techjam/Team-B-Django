@@ -102,6 +102,11 @@
   stroke: #EC8A76;
 }
 
+/* コピー完了時に一瞬アイコンの色を変えるフィードバック */
+.icon-btn--done svg {
+  stroke: #4CAF50;
+}
+
 .btn-return {
   position: absolute;
   bottom: 50px;
