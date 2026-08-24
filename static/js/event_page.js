@@ -321,10 +321,11 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
   // 4. 落書き（Doodle）機能
   // ==========================================
-  const captureArea = document.getElementById('capture-area'); 
+  const captureArea = document.getElementById('capture-area');
   const canvas = document.getElementById('doodle-canvas');
   const doodleToolbar = document.getElementById('doodle-toolbar');
-  
+  const footerActions = document.getElementById('footer-actions');
+
   if (canvas && captureArea) {
     const ctx = canvas.getContext('2d');
     const btnToggleDoodle = document.getElementById('btn-toggle-doodle');
@@ -374,12 +375,14 @@ document.addEventListener('DOMContentLoaded', () => {
         doodleControls.classList.remove('hidden');
         canvas.classList.add('active');
         document.body.style.overflow = 'hidden'; // 背景のスクロールをロック
+        if (footerActions) footerActions.classList.add('doodle-disabled'); // 描画中は押せないことを視覚的に示す
       } else {
         btnToggleDoodle.textContent = '✏️ 落書きモード: OFF';
         btnToggleDoodle.classList.remove('active');
         doodleControls.classList.add('hidden');
         canvas.classList.remove('active');
         document.body.style.overflow = ''; // スクロールロック解除
+        if (footerActions) footerActions.classList.remove('doodle-disabled');
       }
     });
 
