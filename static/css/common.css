@@ -102,6 +102,23 @@ header {
     transform: translateY(-9px) rotate(-45deg);
 }
 
+/* マウス環境のみホバー用トリガーを有効化（タッチ端末の誤爆防止） */
+@media (hover: hover) and (pointer: fine) {
+    .sidebar-trigger {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 30px;
+        height: 100vh;
+        z-index: 90;
+    }
+}
+@media not all and (hover: hover) and (pointer: fine) {
+    .sidebar-trigger {
+        display: none;
+    }
+}
+
 /* JSでこのクラスが付与された時に表示される */
 .sidebar.open {
     transform: translateX(0);

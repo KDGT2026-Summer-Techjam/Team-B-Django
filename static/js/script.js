@@ -2,6 +2,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // 操作する要素を取得
   const trigger = document.getElementById('sidebar-trigger');
   const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  const hamburger = document.getElementById('hamburger')
+
+  // 開く・閉じる処理
+
 
   // トリガー（左端30px）にマウスが入ったら、サイドバーに 'open' クラスを付ける
   trigger.addEventListener('mouseenter', () => {
@@ -17,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /** ------------------------------
   event_done ページ用のボタンアクション
-   ---------------------------------**/
+---------------------------------**/
 
 document.addEventListener('DOMContentLoaded', () => {
   const btnCopy = document.getElementById('btn-copy');
