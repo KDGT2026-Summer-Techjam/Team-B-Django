@@ -292,12 +292,13 @@ document.addEventListener('DOMContentLoaded', () => {
     btnDownload.addEventListener('click', () => {
       const targetArea = document.getElementById('capture-area');
       const footer = document.getElementById('footer-actions');
-      
-      footer.style.display = 'none'; 
-      
+
+      footer.style.display = 'none';
+      if (doodleToolbar) doodleToolbar.style.display = 'none';
+
       if (typeof html2canvas !== 'undefined') {
         html2canvas(targetArea, {
-          scale: 2, 
+          scale: 2,
           backgroundColor: "#F6F5EF",
           useCORS: true
         }).then(canvas => {
@@ -305,20 +306,22 @@ document.addEventListener('DOMContentLoaded', () => {
           link.download = 'inby-event-card.png';
           link.href = canvas.toDataURL('image/png');
           link.click();
-          footer.style.display = 'flex'; 
+          footer.style.display = 'flex';
+          if (doodleToolbar) doodleToolbar.style.display = 'flex';
         }).catch(err => {
           console.error("ダウンロードエラー:", err);
           footer.style.display = 'flex';
+          if (doodleToolbar) doodleToolbar.style.display = 'flex';
         });
       } else {
         alert("画像の生成に失敗しました。少し待ってから再度お試しください。");
         footer.style.display = 'flex';
+        if (doodleToolbar) doodleToolbar.style.display = 'flex';
       }
     });
   }
-});
 
-// ==========================================
+  // ==========================================
   // 4. 落書き（Doodle）機能
   // ==========================================
   const captureArea = document.getElementById('capture-area');
@@ -463,36 +466,4 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     });
   }
-
-  // ★ 既存のダウンロード処理（btnDownload）を少しだけ修正します。
-  // 以下の行を、html2canvas() を呼び出す直前に追加して、ツールバーを隠すようにしてください。
-  if(btnDownload) {
-    btnDownload.addEventListener('click', () => {
-      const footer = document.getElementById('footer-actions');
-      footer.style.display = 'none'; 
-      // ↓↓↓ ここを追加 ↓↓↓
-      if (doodleToolbar) doodleToolbar.style.display = 'none';
-      
-      if (typeof html2canvas !== 'undefined') {
-        html2canvas(captureArea, {
-          scale: 2, 
-          backgroundColor: "#F6F5EF",
-          useCORS: true
-        }).then(canvas => {
-          const link = document.createElement('a');
-          link.download = 'inby-event-card.png';
-          link.href = canvas.toDataURL('image/png');
-          link.click();
-          
-          footer.style.display = 'flex'; 
-          // ↓↓↓ ここを追加 ↓↓↓
-          if (doodleToolbar) doodleToolbar.style.display = 'flex';
-        }).catch(err => {
-          console.error("ダウンロードエラー:", err);
-          footer.style.display = 'flex';
-          // ↓↓↓ ここを追加 ↓↓↓
-          if (doodleToolbar) doodleToolbar.style.display = 'flex';
-        });
-      }
-    });
-  }
+});
