@@ -1,32 +1,11 @@
-// event_page ページ固有のJS
-// docs/設計.md「投稿ページの2状態」: 同じURLのまま参加前／参加後を切り替える。
-// 参加済みかどうかはvisitor_id Cookieを見たサーバー判定(data-is-participant)を初期値にし、
-// 参加ボタンを押した後はページを再読み込みせずにDOMを書き換える。
 document.addEventListener('DOMContentLoaded', () => {
   const body = document.body;
   const publicId = body.dataset.publicId;
-  if (!publicId) {
-    return;
-  }
+  if (!publicId) return;
 
-  const titleEl = document.getElementById('event-title');
-  const dateEl = document.getElementById('event-date');
-  const daysLeftEl = document.getElementById('event-days-left');
-  const locationEl = document.getElementById('event-location');
-  const authorEl = document.getElementById('event-author');
-  const memberCountEl = document.getElementById('event-member-count');
-  const memberListEl = document.getElementById('event-member-list');
-  const joinAreaEl = document.getElementById('event-join-area');
-  const joinedMessageEl = document.getElementById('event-joined-message');
-  const nameInputEl = document.getElementById('event-name-input');
-  const joinBtnEl = document.getElementById('event-join-btn');
-  const errorEl = document.getElementById('event-error');
-
-  // CookieからCSRFトークンを取得する
+  // CSRFトークンを取得
   function getCookie(name) {
-    if (!document.cookie) {
-      return null;
-    }
+    if (!document.cookie) return null;
     const prefix = `${name}=`;
     for (const rawCookie of document.cookie.split(';')) {
       const cookie = rawCookie.trim();
@@ -37,161 +16,304 @@ document.addEventListener('DOMContentLoaded', () => {
     return null;
   }
 
-  function showError(message) {
-    errorEl.textContent = message;
-    errorEl.hidden = false;
-  }
+  // ==========================================
+  // 1. イベント情報の取得・描画・編集機能
+  // ==========================================
+  const nameInputEl = document.getElementById('event-name-input');
+  const joinBtnEl = document.getElementById('event-join-btn');
+  const errorEl = document.getElementById('event-error');
+  
+  let currentEventData = {}; // 編集用に現在のデータを保持
+  let isEditing = false; // 編集モードの判定
 
-  function clearError() {
-    errorEl.textContent = '';
-    errorEl.hidden = true;
-  }
-
-  // 参加前／参加後で、名前入力欄・参加ボタン・「参加しました」表示を切り替える
-  function applyJoinState(isParticipant) {
-    joinAreaEl.hidden = isParticipant;
-    joinBtnEl.hidden = isParticipant;
-    joinedMessageEl.hidden = !isParticipant;
-  }
-
-  // 開催日までの残り日数を出す。当日・過去日は日数ではなく状態を示す文言にする
-  function daysLeftText(eventDate) {
-    const target = new Date(`${eventDate}T00:00:00`);
-    if (Number.isNaN(target.getTime())) {
-      return '';
-    }
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const msPerDay = 24 * 60 * 60 * 1000;
-    const days = Math.round((target - today) / msPerDay);
-
-    if (days > 0) {
-      return `あと${days}日`;
-    }
-    if (days === 0) {
-      return '今日';
-    }
-    return '終了しました';
-  }
-
-  // 参加者一覧を描画する。参加者名はユーザー入力のためtextContentでエスケープする
   function renderParticipants(participants) {
-    memberCountEl.textContent = `${participants.length}人`;
-    memberListEl.textContent = '';
-
+    document.getElementById('event-member-count').textContent = `${participants.length}人`;
+    const listEl = document.getElementById('event-member-list');
+    listEl.textContent = '';
     if (participants.length === 0) {
-      const emptyItem = document.createElement('li');
-      emptyItem.textContent = 'まだメンバーはいません';
-      memberListEl.appendChild(emptyItem);
+      listEl.innerHTML = '<li>まだいません</li>';
       return;
     }
-
-    for (const participant of participants) {
-      const item = document.createElement('li');
-      item.textContent = participant.name;
-      memberListEl.appendChild(item);
-    }
-  }
-  // 開催日が過ぎたイベントか判定する。(開催日target < today なら true)
-  function isPastEvent(eventDate) {
-    const target = new Date(`${eventDate}T00:00:00`);
-    if (Number.isNaN(target.getTime())) {
-      return false;
-    }
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    return target < today;
+    participants.forEach(p => {
+      const li = document.createElement('li');
+      const memberName = p.name ? p.name : p; 
+      li.textContent = `・${memberName}`;
+      listEl.appendChild(li);
+    });
   }
 
-  function renderEvent(eventData) {
-    titleEl.textContent = eventData.title;
-    // 日付のハイフン(YYYY-MM-DD)をスラッシュ(YYYY/MM/DD)に置換
-    dateEl.textContent = eventData.event_date.replace(/-/g, '/');
-    daysLeftEl.textContent = daysLeftText(eventData.event_date);
-    locationEl.textContent = eventData.location;
-    authorEl.textContent = `${eventData.organizer_name} が誘っています`;
-    renderParticipants(eventData.participants || []);
-
-    // 開催日が過ぎていたら「参加ボタン」と「名前入力欄」を隠す。
-    if (isPastEvent(eventData.event_date)) {
-      joinAreaEl.hidden = true;
-      joinBtnEl.hidden = true;
-    }
+  // 画面にテキストを描画する共通関数
+  function renderEventDetails(data) {
+    document.getElementById('event-title').textContent = data.title;
+    document.getElementById('event-date').textContent = data.event_date.replace(/-/g, '/');
+    
+    // 残り日数の計算
+    const target = new Date(`${data.event_date}T00:00:00`);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const diffDays = Math.round((target - today) / (1000 * 60 * 60 * 24));
+    let daysText = diffDays > 0 ? `あと${diffDays}日` : diffDays === 0 ? '今日' : '終了';
+    document.getElementById('event-days-left').textContent = daysText;
+    
+    document.getElementById('event-location').textContent = data.location;
+    document.getElementById('event-author').textContent = `${data.organizer_name} が誘っています`;
+    renderParticipants(data.participants || []);
   }
 
-  // 読み込みに失敗したとき、テンプレートのプレースホルダ（「〇人」「読み込み中...」）を残さない
-  function showLoadError(message) {
-    titleEl.textContent = message;
-    memberCountEl.textContent = '';
-    memberListEl.textContent = '';
-  }
-
-  // イベント情報を読み込んで描画する
   async function loadEvent() {
     try {
-      const response = await fetch(`/api/events/${publicId}`);
-      if (!response.ok) {
-        console.error('データの取得に失敗しました。ステータスコード:', response.status);
-        showLoadError('データを読み込めませんでした');
-        return;
+      const res = await fetch(`/api/events/${publicId}`);
+      if (res.ok) {
+        currentEventData = await res.json();
+        renderEventDetails(currentEventData);
       }
-      renderEvent(await response.json());
-    } catch (error) {
-      console.error('通信エラーが発生しました:', error);
-      showLoadError('通信エラー');
-    }
+    } catch (e) { console.error(e); }
   }
 
-  // 参加ボタン: POST後はレスポンスの参加者一覧でDOMを差し替え、参加後の状態にする
-  async function joinEvent() {
-    clearError();
+  // ★追加：編集ボタンのロジック
+  const btnEdit = document.querySelector('.btn-edit');
+  if (btnEdit) {
+    btnEdit.addEventListener('click', async () => {
+      if (!isEditing) {
+        // 【編集モードへ切り替え】
+        isEditing = true;
+        btnEdit.textContent = '完了';
+        btnEdit.style.backgroundColor = '#E57373'; // 完了ボタンっぽい色に変更
+        
+        // テキストをinputタグに置き換える
+        document.getElementById('event-title').innerHTML = `<input type="text" id="edit-title" class="edit-input" value="${currentEventData.title}">`;
+        document.getElementById('event-date').innerHTML = `<input type="date" id="edit-date" class="edit-input" value="${currentEventData.event_date}">`;
+        document.getElementById('event-location').innerHTML = `<input type="text" id="edit-location" class="edit-input" value="${currentEventData.location}">`;
+        document.getElementById('event-author').innerHTML = `<input type="text" id="edit-author" class="edit-input" value="${currentEventData.organizer_name}">`;
+        
+      } else {
+        // 【保存処理（API通信）】
+        const newTitle = document.getElementById('edit-title').value.trim();
+        const newDate = document.getElementById('edit-date').value;
+        const newLocation = document.getElementById('edit-location').value.trim();
+        const newAuthor = document.getElementById('edit-author').value.trim();
 
+        if (!newTitle || !newDate || !newLocation || !newAuthor) {
+          alert('すべての項目を入力してください');
+          return;
+        }
+
+        btnEdit.disabled = true;
+        try {
+          const headers = { 'Content-Type': 'application/json' };
+          const csrfToken = getCookie('csrftoken');
+          if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+          
+          // PATCHリクエストでデータを更新
+          const res = await fetch(`/api/events/${publicId}`, {
+            method: 'PATCH',
+            headers: headers,
+            body: JSON.stringify({
+              title: newTitle,
+              event_date: newDate,
+              location: newLocation,
+              organizer_name: newAuthor
+            })
+          });
+
+          if (res.ok) {
+            currentEventData = await res.json();
+            isEditing = false;
+            btnEdit.textContent = '編集';
+            btnEdit.style.backgroundColor = ''; // 色を元に戻す
+            renderEventDetails(currentEventData);
+          } else {
+            const err = await res.json();
+            alert(err.error || '編集に失敗しました。作成者のみが編集可能です。');
+          }
+        } catch (e) {
+          alert('通信エラーが発生しました');
+        } finally {
+          btnEdit.disabled = false;
+        }
+      }
+    });
+  }
+
+  // 参加ボタンの処理
+  joinBtnEl.addEventListener('click', async () => {
+    if (errorEl) { errorEl.textContent = ''; errorEl.hidden = true; }
     const name = nameInputEl.value.trim();
     if (!name) {
-      showError('名前を入力してください');
+      if (errorEl) { errorEl.textContent = '名前を入力してください'; errorEl.hidden = false; }
       return;
     }
-
+    
     joinBtnEl.disabled = true;
     try {
       const headers = { 'Content-Type': 'application/json' };
-      // トークンが取れないときはヘッダを付けない（文字列 "null" を送るとサーバー側で扱いにくい）
       const csrfToken = getCookie('csrftoken');
-      if (csrfToken) {
-        headers['X-CSRFToken'] = csrfToken;
-      }
+      if (csrfToken) headers['X-CSRFToken'] = csrfToken;
 
-      const response = await fetch(`/api/events/${publicId}/participants`, {
+      const res = await fetch(`/api/events/${publicId}/participants`, {
         method: 'POST',
-        headers,
+        headers: headers,
         body: JSON.stringify({ name })
       });
-
-      // エラー時はHTML（CSRFエラーページなど）が返ることがあるため、JSONで読めない場合も想定する
-      const data = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        console.error('参加登録に失敗しました。ステータスコード:', response.status);
-        showError(data && data.error ? data.error : '参加に失敗しました');
-        return;
+      
+      if (res.ok) {
+        const data = await res.json();
+        // 現在のデータにも参加者を反映
+        if (data.participants && Array.isArray(data.participants)) {
+          currentEventData.participants = data.participants;
+        } else {
+          currentEventData.participants.push({ name: name }); 
+        }
+        renderParticipants(currentEventData.participants);
+        nameInputEl.value = ''; 
+      } else {
+        if (errorEl) { errorEl.textContent = 'エラーが発生しました'; errorEl.hidden = false; }
       }
-      if (!data) {
-        console.error('参加登録のレスポンスをJSONとして読めませんでした');
-        showError('参加に失敗しました');
-        return;
-      }
-
-      renderParticipants(data.participants || []);
-      applyJoinState(true);
-    } catch (error) {
-      console.error('API Error:', error);
-      showError('通信エラーが発生しました。');
+    } catch (e) { 
+      if (errorEl) { errorEl.textContent = '通信エラーが発生しました'; errorEl.hidden = false; }
     } finally {
       joinBtnEl.disabled = false;
     }
+  });
+
+  loadEvent();
+
+  // ==========================================
+  // 2. スタンプラリーのロジック
+  // ==========================================
+  const activePath = document.getElementById('active-path');
+  let pathLength = 0;
+  if (activePath) {
+    pathLength = activePath.getTotalLength(); 
+    activePath.style.strokeDasharray = pathLength;
+    activePath.style.strokeDashoffset = pathLength; 
+    activePath.style.transition = 'stroke-dashoffset 1.5s ease-in-out';
+  }
+  
+  let currentMission = 1;
+  
+  for (let i = 1; i <= 3; i++) {
+    const node = document.getElementById(`node-${i}`);
+    const pBox = document.getElementById(`photo-box-${i}`);
+    
+    if (node) {
+      node.classList.remove('hidden');
+      node.classList.add('locked');
+    }
+    if (pBox) {
+      pBox.classList.remove('hidden');
+      pBox.classList.add('locked');
+    }
   }
 
-  applyJoinState(body.dataset.isParticipant === 'true');
-  joinBtnEl.addEventListener('click', joinEvent);
-  loadEvent();
+  for(let i=1; i<=3; i++) {
+    const node = document.getElementById(`node-${i}`);
+    if(node) {
+      node.addEventListener('click', () => {
+        if (node.classList.contains('locked') && i === currentMission) {
+          setNodeActive(i); 
+        }
+      });
+    }
+    
+    const fileInput = document.getElementById(`file-${i}`);
+    if(fileInput) {
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const img = document.getElementById(`preview-${i}`);
+            img.src = event.target.result;
+            img.style.display = 'block';
+            document.querySelector(`#photo-box-${i} .photo-label`).style.display = 'none';
+            
+            setNodeDone(i);
+            
+            if(i < 3) {
+              animatePathToNext(i);
+            }
+          }
+          reader.readAsDataURL(e.target.files[0]);
+        }
+      });
+    }
+  }
+
+  function setNodeActive(num) {
+    const node = document.getElementById(`node-${num}`);
+    node.className = `map-node node-${num} active`;
+    node.innerHTML = `<div class="node-icon">📷</div><div class="node-num">${num}</div>`;
+    
+    const pBox = document.getElementById(`photo-box-${num}`);
+    pBox.className = `photo-box pb-${num} active`;
+
+    const mRow = document.querySelector(`.mission-row[data-mission="${num}"]`);
+    mRow.className = `mission-row active`;
+    document.getElementById(`m-icon-${num}`).textContent = '📷';
+  }
+
+  function setNodeDone(num) {
+    const node = document.getElementById(`node-${num}`);
+    node.className = `map-node node-${num} done`;
+    node.innerHTML = `<div class="node-icon">✔</div><div class="node-num">✔</div>`;
+    
+    const pBox = document.getElementById(`photo-box-${num}`);
+    pBox.className = `photo-box pb-${num} done`;
+    
+    const mRow = document.querySelector(`.mission-row[data-mission="${num}"]`);
+    mRow.className = `mission-row done`;
+    document.getElementById(`m-icon-${num}`).textContent = '✔';
+  }
+
+  function animatePathToNext(currentNum) {
+    if (!activePath) return;
+    const offset = currentNum === 1 ? (pathLength * 0.5) : 0; 
+    activePath.style.strokeDashoffset = offset;
+    
+    setTimeout(() => {
+      currentMission = currentNum + 1;
+    }, 1500);
+  }
+
+  // ==========================================
+  // 3. コピーとダウンロード機能
+  // ==========================================
+  const btnCopy = document.getElementById('btn-copy');
+  if(btnCopy) {
+    btnCopy.addEventListener('click', () => {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        alert('URLをコピーしました！');
+      });
+    });
+  }
+
+  const btnDownload = document.getElementById('btn-download');
+  if(btnDownload) {
+    btnDownload.addEventListener('click', () => {
+      const targetArea = document.getElementById('capture-area');
+      const footer = document.getElementById('footer-actions');
+      
+      footer.style.display = 'none'; 
+      
+      if (typeof html2canvas !== 'undefined') {
+        html2canvas(targetArea, {
+          scale: 2, 
+          backgroundColor: "#F6F5EF",
+          useCORS: true
+        }).then(canvas => {
+          const link = document.createElement('a');
+          link.download = 'inby-event-card.png';
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+          footer.style.display = 'flex'; 
+        }).catch(err => {
+          console.error("ダウンロードエラー:", err);
+          footer.style.display = 'flex';
+        });
+      } else {
+        alert("画像の生成に失敗しました。少し待ってから再度お試しください。");
+        footer.style.display = 'flex';
+      }
+    });
+  }
 });
