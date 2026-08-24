@@ -39,6 +39,20 @@ document.addEventListener('DOMContentLoaded', async () => {
               document.getElementById('done-location').textContent = eventData.location;
               document.getElementById('done-author').textContent = eventData.organizer_name;
 
+              // コピー・シェアボタン（script.js）に渡す共有用テキストとURLを組み立てる
+              // event_date は "YYYY-MM-DD" 形式のため、月・日を取り出して定型文に埋め込む
+              const [, month, day] = eventData.event_date.split('-').map(Number);
+              window.eventShareText = `${month}月${day}日は空いてる？みんなで一緒に${eventData.title}に行こう！`;
+              // 末尾スラッシュ必須（events/urls.pyのルーティングに合わせる）
+              window.eventShareUrl = `${window.location.origin}/e/${publicId}/`;
+
+              // 共有データの組み立てが終わるまでは、コピー・シェアボタンを無効のままにする。
+              // 取得前に押されると空文字や誤ったURLがコピー・共有されてしまうため
+              const btnCopy = document.getElementById('btn-copy');
+              const btnShare = document.getElementById('btn-share');
+              if (btnCopy) btnCopy.disabled = false;
+              if (btnShare) btnShare.disabled = false;
+
               // 4. メンバーのリスト処理
               const membersContainer = document.getElementById('done-members');
               membersContainer.innerHTML = ''; // 「読み込み中...」の文字をクリア
