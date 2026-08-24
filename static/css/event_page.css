@@ -223,6 +223,11 @@ main {
   align-items: center;
   justify-content: center;
 }
+
+/* display:flexの詳細度がhidden属性より高く、hidden指定時も表示され続けてしまうため明示的に上書きする */
+.join-area .btn-complete[hidden] {
+  display: none;
+}
 /* ================= 下部：スタンプラリー ================= */
 .stamp-rally-card {
   background-color: #F8F9FA;
