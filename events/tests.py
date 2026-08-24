@@ -5,10 +5,17 @@ from unittest.mock import patch
 from pathlib import Path
 
 from django.conf import settings
+from django.db import IntegrityError
 from django.test import TestCase
 from django.utils import timezone
 
-from .models import Event, Mission, Participant
+from .models import (
+    PUBLIC_ID_MAX_ATTEMPTS,
+    Event,
+    Mission,
+    Participant,
+    PublicIdCollisionError,
+)
 
 
 def future_date_str(month, day):
@@ -1557,3 +1564,120 @@ class MyEventsApiTests(TestCase):
         self.assertIsNone(
             events_by_public_id[participated_event.public_id]["image"]
         )
+
+
+class PublicIdCollisionTests(TestCase):
+    def setUp(self):
+        self.existing = Event.objects.create(
+            title="長岡花火大会",
+            event_date="2026-08-22",
+            location="新潟県長岡市",
+            organizer_name="田中",
+        )
+
+    def create(self, **extra):
+        return Event.objects.create(
+            title="ぶどう狩り",
+            event_date="2026-10-01",
+            location="新潟県南魚沼市",
+            organizer_name="鈴木",
+            **extra,
+        )
+
+    def test_colliding_public_id_is_regenerated(self):
+        with patch(
+            "events.models.generate_public_id", side_effect=["ab34cd"]
+        ) as generate:
+            event = self.create(public_id=self.existing.public_id)
+
+        self.assertEqual(event.public_id, "ab34cd")
+        self.assertEqual(generate.call_count, 1)
+        self.assertEqual(Event.objects.count(), 2)
+
+    def test_retries_until_a_free_public_id_is_found(self):
+        with patch(
+            "events.models.generate_public_id",
+            side_effect=[self.existing.public_id, self.existing.public_id, "ab34cd"],
+        ) as generate:
+            event = self.create(public_id=self.existing.public_id)
+
+        self.assertEqual(event.public_id, "ab34cd")
+        self.assertEqual(generate.call_count, 3)
+
+    def test_gives_up_after_max_attempts(self):
+        with patch(
+            "events.models.generate_public_id", return_value=self.existing.public_id
+        ) as generate:
+            with self.assertRaises(PublicIdCollisionError):
+                self.create(public_id=self.existing.public_id)
+
+        # 最初の1回は生成済みのIDを使うため、生成し直すのは上限-1回
+        self.assertEqual(generate.call_count, PUBLIC_ID_MAX_ATTEMPTS - 1)
+        self.assertEqual(Event.objects.count(), 1)
+
+    def test_other_integrity_errors_are_not_retried(self):
+        error = IntegrityError("UNIQUE constraint failed: events_event.edit_token")
+        with patch("django.db.models.Model.save", side_effect=error):
+            with patch("events.models.generate_public_id") as generate:
+                with self.assertRaises(IntegrityError):
+                    self.create()
+
+        generate.assert_not_called()
+
+    def test_updating_an_event_keeps_its_public_id(self):
+        public_id = self.existing.public_id
+
+        with patch("events.models.generate_public_id") as generate:
+            self.existing.title = "長岡花火大会2026"
+            self.existing.save()
+
+        self.existing.refresh_from_db()
+        self.assertEqual(self.existing.public_id, public_id)
+        generate.assert_not_called()
+
+    def test_create_event_api_returns_error_when_public_id_cannot_be_issued(self):
+        payload = {
+            "title": "ぶどう狩り",
+            "event_date": "2026-10-01",
+            "location": "新潟県南魚沼市",
+            "organizer_name": "鈴木",
+        }
+        # フィールドの既定値は生成関数を直接参照しているため、既定値側を差し替える
+        field = Event._meta.get_field("public_id")
+
+        with patch.object(field, "_get_default", lambda: self.existing.public_id):
+            with patch(
+                "events.models.generate_public_id",
+                return_value=self.existing.public_id,
+            ):
+                response = self.client.post(
+                    "/api/events",
+                    data=json.dumps(payload),
+                    content_type="application/json",
+                )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertIn("error", response.json())
+        self.assertEqual(Event.objects.count(), 1)
+
+    def test_create_event_api_succeeds_when_a_retry_frees_the_public_id(self):
+        payload = {
+            "title": "ぶどう狩り",
+            "event_date": "2026-10-01",
+            "location": "新潟県南魚沼市",
+            "organizer_name": "鈴木",
+        }
+        # フィールドの既定値は生成関数を直接参照しているため、既定値側を差し替える
+        field = Event._meta.get_field("public_id")
+
+        with patch.object(field, "_get_default", lambda: self.existing.public_id):
+            with patch("events.models.generate_public_id", side_effect=["ab34cd"]):
+                response = self.client.post(
+                    "/api/events",
+                    data=json.dumps(payload),
+                    content_type="application/json",
+                )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["public_id"], "ab34cd")
+        self.assertEqual(Event.objects.count(), 2)

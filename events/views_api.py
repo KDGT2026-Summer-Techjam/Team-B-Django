@@ -7,7 +7,7 @@ from django.http import HttpResponseNotAllowed, JsonResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_time
 
-from .models import Event, Mission, Participant
+from .models import Event, Mission, Participant, PublicIdCollisionError
 
 # 編集画面の表示はURLのクエリパラメータで編集トークンを受け取る
 # （docs/設計.md「visitor_idの仕組み」）
@@ -253,15 +253,21 @@ def create_event(request):
             return error
 
     # 作成者のvisitor_idを残す。編集画面の認可と、参加/作成イベントの集計に使う
-    event = Event.objects.create(
-        title=cleaned_data["title"],
-        event_date=event_date,
-        location=cleaned_data["location"],
-        organizer_name=cleaned_data["organizer_name"],
-        creator_visitor_id=request.visitor_id,
-        start_time=start_time,
-        image=image,
-    )
+    try:
+        event = Event.objects.create(
+            title=cleaned_data["title"],
+            event_date=event_date,
+            location=cleaned_data["location"],
+            organizer_name=cleaned_data["organizer_name"],
+            creator_visitor_id=request.visitor_id,
+            start_time=start_time,
+            image=image,
+        )
+    except PublicIdCollisionError:
+        return JsonResponse(
+            {"error": "イベントを作成できませんでした。もう一度お試しください"},
+            status=500,
+        )
     Participant.objects.create(
         event=event,
         name=cleaned_data["organizer_name"],
