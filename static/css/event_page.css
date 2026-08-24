@@ -235,6 +235,37 @@ main {
 .join-area .btn-complete[hidden] {
   display: none;
 }
+
+/* 参加取り消しボタン：離脱操作のため「参加する」ボタンより控えめな見た目にする */
+.btn-cancel-join {
+  position: static !important;
+  transform: none !important;
+  margin: 0 !important;
+  width: 100%;
+  background-color: #fff;
+  color: #757575;
+  border: 1px solid #ccc;
+  padding: 0 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  height: 26px; /* 参加する/名前入力欄と高さを揃える */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-cancel-join:hover {
+  background-color: #F5F5F5;
+  border-color: #999;
+}
+
+/* display:flexの詳細度がhidden属性より高く、hidden指定時も表示され続けてしまうため明示的に上書きする */
+.btn-cancel-join[hidden] {
+  display: none;
+}
 /* ================= 下部：スタンプラリー ================= */
 .stamp-rally-card {
   background-color: #F8F9FA;
