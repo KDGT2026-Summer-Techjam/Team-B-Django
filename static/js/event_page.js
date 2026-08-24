@@ -26,7 +26,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let currentParticipantId = null; //現在のブラウザで参加しているParticipantのIDを保持
   let currentEventData = {}; // 編集用に現在のデータを保持
-  let isEditing = false; // 編集モードの判定
 
   function renderParticipants(participants) {
     document.getElementById('event-member-count').textContent = `${participants.length}人`;
@@ -99,71 +98,6 @@ document.addEventListener('DOMContentLoaded', () => {
         applyParticipationState(currentEventData.my_participant_id);
       }
     } catch (e) { console.error(e); }
-  }
-
-  // ★追加：編集ボタンのロジック
-  const btnEdit = document.querySelector('.btn-edit');
-  if (btnEdit) {
-    btnEdit.addEventListener('click', async () => {
-      if (!isEditing) {
-        // 【編集モードへ切り替え】
-        isEditing = true;
-        btnEdit.textContent = '完了';
-        btnEdit.style.backgroundColor = '#E57373'; // 完了ボタンっぽい色に変更
-        
-        // テキストをinputタグに置き換える
-        document.getElementById('event-title').innerHTML = `<input type="text" id="edit-title" class="edit-input" value="${currentEventData.title}">`;
-        document.getElementById('event-date').innerHTML = `<input type="date" id="edit-date" class="edit-input" value="${currentEventData.event_date}">`;
-        document.getElementById('event-location').innerHTML = `<input type="text" id="edit-location" class="edit-input" value="${currentEventData.location}">`;
-        document.getElementById('event-author').innerHTML = `<input type="text" id="edit-author" class="edit-input" value="${currentEventData.organizer_name}">`;
-        
-      } else {
-        // 【保存処理（API通信）】
-        const newTitle = document.getElementById('edit-title').value.trim();
-        const newDate = document.getElementById('edit-date').value;
-        const newLocation = document.getElementById('edit-location').value.trim();
-        const newAuthor = document.getElementById('edit-author').value.trim();
-
-        if (!newTitle || !newDate || !newLocation || !newAuthor) {
-          alert('すべての項目を入力してください');
-          return;
-        }
-
-        btnEdit.disabled = true;
-        try {
-          const headers = { 'Content-Type': 'application/json' };
-          const csrfToken = getCookie('csrftoken');
-          if (csrfToken) headers['X-CSRFToken'] = csrfToken;
-          
-          // PATCHリクエストでデータを更新
-          const res = await fetch(`/api/events/${publicId}`, {
-            method: 'PATCH',
-            headers: headers,
-            body: JSON.stringify({
-              title: newTitle,
-              event_date: newDate,
-              location: newLocation,
-              organizer_name: newAuthor
-            })
-          });
-
-          if (res.ok) {
-            currentEventData = await res.json();
-            isEditing = false;
-            btnEdit.textContent = '編集';
-            btnEdit.style.backgroundColor = ''; // 色を元に戻す
-            renderEventDetails(currentEventData);
-          } else {
-            const err = await res.json();
-            alert(err.error || '編集に失敗しました。作成者のみが編集可能です。');
-          }
-        } catch (e) {
-          alert('通信エラーが発生しました');
-        } finally {
-          btnEdit.disabled = false;
-        }
-      }
-    });
   }
 
   // 参加ボタンの処理

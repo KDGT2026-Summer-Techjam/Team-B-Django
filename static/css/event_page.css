@@ -43,7 +43,7 @@ main {
 .btn-edit {
   top: 15px;
   right: 15px;
-  background-color: #8DA0CC; 
+  background-color: #8DA0CC;
   color: #fff;
   border: none;
   padding: 5px 12px;
@@ -52,6 +52,8 @@ main {
   cursor: pointer;
   z-index: 10;
   margin-bottom: 8px;
+  display: inline-block;
+  text-decoration: none;
 }
 
 .header-inner {
@@ -138,27 +140,6 @@ main {
   line-height: 1.3;
 }
 
-.edit-input {
-  width: 100%;
-  font-family: inherit;
-  border: 1px dashed rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.4);
-  border-radius: 4px;
-  padding: 2px 4px;
-  box-sizing: border-box;
-  color: #333;
-  font-size: 10px;
-}
-.edit-input:focus {
-  outline: none;
-  background: rgba(255, 255, 255, 0.7);
-  border-color: #fff;
-}
-#edit-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #2F4F2F;
-}
 
 /* 右側：画像＆参加エリア */
 .action-section {
