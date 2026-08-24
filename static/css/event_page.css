@@ -388,3 +388,80 @@ main {
 }
 .icon-btn { background: none; border: none; cursor: pointer; padding: 0;}
 .card-footer-icons svg { width: 22px; height: 22px; fill: #555; }
+
+/* 落書きモード中はダウンロード/共有ボタンが押せないため、薄くして操作不可であることを示す */
+.card-footer-icons.doodle-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+/* ================= 落書き（Doodle）機能 ================= */
+
+/* 大前提：親要素を基準にキャンバスを広げるためのおまじない */
+#capture-area {
+  position: relative;
+}
+
+/* キャンバス本体 */
+.doodle-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 50; /* テキストや地図の上に被せる */
+  pointer-events: none; /* 初期状態はタップを貫通させる */
+  touch-action: none; /* スマホブラウザのスクロール動作をブロック */
+}
+.doodle-layer.active {
+  pointer-events: auto; /* 落書きモードONで描画可能に */
+  cursor: crosshair;
+}
+
+/* ツールバーとUI */
+.doodle-toolbar {
+  position: fixed;
+  bottom: 80px; /* 右下のボタン類と被らない高さ */
+  right: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  z-index: 100;
+}
+
+.doodle-btn {
+  background: #333; 
+  color: #fff; 
+  border: none; 
+  padding: 8px 12px; 
+  border-radius: 20px;
+  font-size: 11px; 
+  cursor: pointer; 
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.doodle-btn.active { background: #E57373; }
+.clear-btn { background: #999; width: 100%; margin-top: 5px; }
+
+.doodle-controls {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #ddd;
+}
+.doodle-controls.hidden { display: none; }
+
+.color-palette { display: flex; gap: 8px; }
+.color-swatch {
+  width: 20px; height: 20px; 
+  border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent;
+}
+.color-swatch.active { border-color: #333; transform: scale(1.1); }
+.weight-control { display: flex; align-items: center; gap: 5px; }
