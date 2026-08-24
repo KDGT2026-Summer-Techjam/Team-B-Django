@@ -57,6 +57,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let daysText = diffDays > 0 ? `あと${diffDays}日` : diffDays === 0 ? '今日' : '終了';
     document.getElementById('event-days-left').textContent = daysText;
 
+    // 開始時刻の表示（任意項目のため、設定されている場合のみ表示する）
+    const timeEl = document.getElementById('event-time');
+    if (data.start_time) {
+      timeEl.textContent = data.start_time.slice(0, 5);
+      timeEl.hidden = false;
+    } else {
+      timeEl.hidden = true;
+    }
+
     document.getElementById('event-location').textContent = data.location;
     document.getElementById('event-author').textContent = `${data.organizer_name} が誘っています`;
     renderParticipants(data.participants || []);
