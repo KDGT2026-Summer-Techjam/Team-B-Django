@@ -461,10 +461,16 @@ def join_event(request, public_id):
     if len(name) > max_length:
         return JsonResponse({"error": "入力が長すぎます"}, status=400)
 
-    participant = Participant.objects.create(
-        event=event, name=name, visitor_id=request.visitor_id
-    )
-    status = 201
+    participant = event.participants.filter(visitor_id=request.visitor_id).first()
+    status = 200
+    if participant is None:
+        participant = Participant.objects.create(
+            event=event, name=name, visitor_id=request.visitor_id
+        )
+        status = 201
+    else:
+        participant.name = name
+        participant.save()
 
     participants = [
         {"id": p.id, "name": p.name}
