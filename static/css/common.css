@@ -48,6 +48,24 @@ header {
     width: 30px;
     height: 100vh;
     z-index: 90;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    align-items: flex-start; 
+    padding-left: 12px; /* ★ここが左側の余白になります！好きな数値に調整してください */
+    box-sizing: border-box; /* paddingを含めた幅として計算させるおまじない */
+    gap: 30px;
+
+}
+
+/* トリガー内のアイコン設定 */
+.sidebar-trigger svg {
+    width: 24px;
+    height: 24px;
+    fill: #8AB69B; /* サイドバーの背景と同じ色 */
+    opacity: 0.9;
+    transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 .sidebar {
@@ -87,6 +105,7 @@ header {
 .menu li:hover {
     opacity: 0.7;
 }
+
 
 /* ================================
    aタグ（リンク）用の追加スタイル
