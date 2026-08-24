@@ -66,8 +66,8 @@
 
             <!-- 右側：画像＆参加エリア -->
             <div class="action-section">
-              <!-- ★ 編集ボタンを右側グループの一番上に配置 -->
-              <button class="btn-edit">編集</button>
+              <!-- 編集は専用画面（開始時刻・画像にも対応）に集約する。権限が無い場合は編集画面側で403になる -->
+              <a class="btn-edit" href="{% url 'event_edit' public_id=public_id %}">編集</a>
               
               <div class="map-placeholder">
                 <img id="event-image" alt="イベント画像" style="display: none;">
