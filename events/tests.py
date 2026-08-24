@@ -1518,3 +1518,42 @@ class UpdateEventImageTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), {"error": "画像のサイズが大きすぎます"})
+
+
+class MyEventsApiTests(TestCase):
+    """my_eventsカード一覧(#44)でも画像を表示できるよう、/api/my-eventsのimageフィールドを検証する。"""
+
+    def test_returns_image_field_for_created_and_participated_events(self):
+        created_event = Event.objects.create(
+            title="作成イベント",
+            event_date="2026-08-22",
+            location="会場",
+            organizer_name="田中",
+            creator_visitor_id="visitor-a",
+            image=make_photo(),
+        )
+        participated_event = Event.objects.create(
+            title="参加イベント",
+            event_date="2026-08-23",
+            location="会場",
+            organizer_name="鈴木",
+            creator_visitor_id="visitor-b",
+        )
+        Participant.objects.create(
+            event=participated_event, name="太郎", visitor_id="visitor-a"
+        )
+
+        self.client.cookies["visitor_id"] = "visitor-a"
+        response = self.client.get("/api/my-events")
+
+        self.assertEqual(response.status_code, 200)
+        events_by_public_id = {
+            event["public_id"]: event for event in response.json()["events"]
+        }
+        self.assertEqual(
+            events_by_public_id[created_event.public_id]["image"],
+            created_event.image,
+        )
+        self.assertIsNone(
+            events_by_public_id[participated_event.public_id]["image"]
+        )

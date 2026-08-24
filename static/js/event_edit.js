@@ -25,6 +25,86 @@ document.addEventListener("DOMContentLoaded", () => {
     const today = new Date().toISOString().split("T")[0];
     inputDate.setAttribute("min", today);
 
+    // 画像アップロード関連の要素（画像は任意項目のためeditableInputsには含めない）
+    // 受け付ける形式・サイズ上限はevents/views_api.pyのPHOTO_DATA_URL_PREFIXES・PHOTO_MAX_LENGTHと合わせる
+    const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+    const IMAGE_MAX_LENGTH = 5 * 1024 * 1024;
+    const imageSection = document.getElementById("image-section");
+    const inputImage = document.getElementById("input-image");
+    const imagePreview = document.getElementById("image-preview");
+    const imagePlaceholderIcon = document.getElementById("image-placeholder-icon");
+    const btnRemoveImage = document.getElementById("btn-remove-image");
+    const errorImage = document.getElementById("error-image");
+    // 読み込み時の画像、または新たに選択・削除した画像。未変更ならpayloadに含めない
+    let selectedImageDataUrl = null;
+    let imageChanged = false;
+
+    // 画像エリアのクリックでファイル選択ダイアログを開く
+    imageSection.addEventListener("click", () => {
+        inputImage.click();
+    });
+
+    function showImageError(message) {
+        errorImage.textContent = message;
+        errorImage.style.display = "block";
+        inputImage.value = "";
+    }
+
+    function showImagePreview(dataUrl) {
+        imagePreview.src = dataUrl;
+        imagePreview.style.display = "block";
+        imagePlaceholderIcon.style.display = "none";
+        btnRemoveImage.style.display = "inline";
+    }
+
+    function clearImagePreview() {
+        imagePreview.src = "";
+        imagePreview.style.display = "none";
+        imagePlaceholderIcon.style.display = "block";
+        btnRemoveImage.style.display = "none";
+    }
+
+    // ファイル選択時に形式・サイズを検証し、Base64へ変換してプレビュー表示する
+    inputImage.addEventListener("change", () => {
+        const file = inputImage.files[0];
+        if (!file) {
+            return;
+        }
+
+        errorImage.style.display = "none";
+        errorImage.textContent = "";
+
+        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+            showImageError("対応していない画像形式です（JPEG/PNG/WEBPのみ）");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const dataUrl = reader.result;
+            if (dataUrl.length > IMAGE_MAX_LENGTH) {
+                showImageError("画像のサイズが大きすぎます（5MB以下にしてください）");
+                return;
+            }
+            selectedImageDataUrl = dataUrl;
+            imageChanged = true;
+            showImagePreview(selectedImageDataUrl);
+        };
+        reader.onerror = () => {
+            showImageError("画像の読み込みに失敗しました");
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // 画像を削除ボタン：選択中の画像を外す（保存時にimage: nullとして送る）
+    btnRemoveImage.addEventListener("click", (event) => {
+        event.stopPropagation();
+        selectedImageDataUrl = null;
+        imageChanged = true;
+        inputImage.value = "";
+        clearImagePreview();
+    });
+
     // CSRFトークン取得
     function getCookie(name) {
         let cookieValue = null;
@@ -57,12 +137,16 @@ document.addEventListener("DOMContentLoaded", () => {
     function showError(message) {
         let targetId = "error-title";
 
-        if (message === "日付が不正です") {
+        if (message === "日付が不正です" || message === "過去の日時は指定できません") {
             targetId = "error-date";
+        } else if (message === "時間が不正です") {
+            targetId = "error-time";
         } else if (message === "投稿者名を入力してください") {
             targetId = "error-author";
         } else if (message === "必須項目を入力してください") {
             targetId = "error-title";
+        } else if (message === "画像の形式が不正です" || message === "画像のサイズが大きすぎます") {
+            targetId = "error-image";
         }
 
         const target = document.getElementById(targetId);
@@ -108,9 +192,19 @@ document.addEventListener("DOMContentLoaded", () => {
             inputLocation.value = data.location;
             inputAuthor.value = data.organizer_name;
 
-            // 表示のみの項目
-            // 現在のAPIには時間がないため空欄のまま
-            inputTime.value = "";
+            // 時間：編集可能（任意項目）
+            // APIは秒付きISO形式("HH:MM:SS")で返すが、input[type=time]は
+            // "HH:MM"でないと未変更のまま再送信した際にサーバー側の検証で弾かれるため切り詰める
+            inputTime.value = data.start_time ? data.start_time.slice(0, 5) : "";
+
+            // 画像：編集可能（任意項目）。読み込み時点では未変更として扱う
+            selectedImageDataUrl = data.image || null;
+            imageChanged = false;
+            if (selectedImageDataUrl) {
+                showImagePreview(selectedImageDataUrl);
+            } else {
+                clearImagePreview();
+            }
 
             // メンバー
             if (data.participants && data.participants.length > 0) {
@@ -138,6 +232,16 @@ document.addEventListener("DOMContentLoaded", () => {
             location: inputLocation.value.trim(),
             organizer_name: inputAuthor.value.trim(),
         };
+
+        // 時間は任意項目のため、入力されている場合のみpayloadに含める
+        if (inputTime.value) {
+            payload.start_time = inputTime.value;
+        }
+
+        // 画像は変更した場合のみpayloadに含める（未変更なら送らない。削除時はnullを送る）
+        if (imageChanged) {
+            payload.image = selectedImageDataUrl;
+        }
 
         try {
             btnComplete.disabled = true;

@@ -14,7 +14,7 @@
 
     <!-- ヘッダー -->
     <header>
-        <div class="header-title">edit_event.html</div>
+        <div class="header-title">イベント情報更新</div>
     </header>
 
     <!-- サイドバー表示用のトリガー -->
@@ -72,9 +72,11 @@
                             style="color: red; font-size: 12px; margin: 0; display: none;"></p>
                     </div>
 
-                    <!-- 時間：表示のみ -->
+                    <!-- 時間：編集可能（任意項目） -->
                     <div class="input-group">
-                        <input type="text" id="input-time" class="input-time" placeholder="時間" readonly>
+                        <input type="time" id="input-time" class="input-time">
+                        <p class="error-msg" id="error-time"
+                            style="color: red; font-size: 12px; margin: 0; display: none;"></p>
                     </div>
 
                     <!-- 場所：編集可能 -->
@@ -101,12 +103,20 @@
 
                 </div>
 
-                <!-- 右側の画像エリア -->
-                <div class="image-section">
-                    <svg viewBox="0 0 24 24">
-                        <path
-                            d="M19,3H5C3.89,3 3,3.9 3,5V19A2,2 0,0,0 5,21H19A2,2 0,0,0 21,19V5C21,3.89 20.1,3 19,3M19,19H5V5H19V19M13.96,12.29L11.21,15.83L9.25,13.47L6.5,17H17.5L13.96,12.29Z" />
-                    </svg>
+                <!-- 右側の画像エリア（縦積みにして、エラー表示時もcard-contentの横並びを崩さない） -->
+                <div class="image-upload">
+                    <div class="image-section" id="image-section">
+                        <svg id="image-placeholder-icon" viewBox="0 0 24 24">
+                            <path
+                                d="M19,3H5C3.89,3 3,3.9 3,5V19A2,2 0,0,0 5,21H19A2,2 0,0,0 21,19V5C21,3.89 20.1,3 19,3M19,19H5V5H19V19M13.96,12.29L11.21,15.83L9.25,13.47L6.5,17H17.5L13.96,12.29Z" />
+                        </svg>
+                        <img id="image-preview" alt="選択した画像のプレビュー" style="display: none;">
+                        <!-- 受け付ける画像形式はevents/views_api.pyのPHOTO_DATA_URL_PREFIXESと合わせる -->
+                        <input type="file" id="input-image" accept="image/jpeg,image/png,image/webp" style="display: none;">
+                    </div>
+                    <button type="button" id="btn-remove-image" class="btn-remove-image" style="display: none;">画像を削除</button>
+                    <p class="error-msg" id="error-image"
+                        style="color: red; font-size: 12px; margin: 0; display: none;"></p>
                 </div>
 
             </div>
