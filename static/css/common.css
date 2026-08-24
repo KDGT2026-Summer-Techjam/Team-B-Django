@@ -68,6 +68,7 @@ header {
 
 /* ハンバーガーボタンのCSS */
 .hamburger {
+    z-index: 101;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -85,7 +86,22 @@ header {
     height: 4px;
     background-color: #AAA;
     border-radius: 1px;
+    transition: transform 0.3 ease, opacity 0.3s ease;
 }
+
+/* aria-expanded="true"（メニュー展開時）の見た目（×印に変形） */
+.hamburger[aria-expanded="true"] span:nth-child(1) {
+    transform: translateY(9px) rotate(45deg);
+}
+
+.hamburger[aria-expanded="true"] span:nth-child(2) {
+    opacity: 0; /* 中央の線を消す */
+}
+
+.hamburger[aria-expanded="true"] span:nth-child(3) {
+    transform: translateY(-9px) rotate(-45deg);
+}
+
 /* JSでこのクラスが付与された時に表示される */
 .sidebar.open {
     transform: translateX(0);
