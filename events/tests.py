@@ -261,9 +261,24 @@ class GetEventTests(TestCase):
                     {"id": second.id, "name": "鈴木"},
                 ],
                 "missions": [],
+                "my_participant_id": None,
             },
         )
         self.assertNotIn("user", response.json())
+
+    def test_get_event_returns_my_participant_id_for_matching_visitor(self):
+        self.client.cookies["visitor_id"] = "visitor-a"
+        mine = Participant.objects.create(
+            event=self.event, name="佐藤", visitor_id="visitor-a"
+        )
+        Participant.objects.create(
+            event=self.event, name="鈴木", visitor_id="visitor-b"
+        )
+
+        response = self.client.get(f"/api/events/{self.event.public_id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["my_participant_id"], mine.id)
 
     def test_get_event_returns_empty_participants(self):
         response = self.client.get(f"/api/events/{self.event.public_id}")
@@ -509,6 +524,76 @@ class JoinEventTests(TestCase):
 
         self.assertEqual(response.status_code, 405)
         self.assertEqual(response.headers["Allow"], "POST")
+
+
+class DeleteParticipantTests(TestCase):
+    def setUp(self):
+        self.event = Event.objects.create(
+            title="長岡花火大会",
+            event_date="2026-08-22",
+            location="新潟県長岡市",
+            organizer_name="田中",
+        )
+
+    def delete(self, participant_id):
+        return self.client.delete(
+            f"/api/events/{self.event.public_id}/participants/{participant_id}"
+        )
+
+    def test_delete_own_participant_removes_it_and_returns_remaining_list(self):
+        self.client.cookies["visitor_id"] = "visitor-a"
+        mine = Participant.objects.create(
+            event=self.event, name="山田", visitor_id="visitor-a"
+        )
+        other = Participant.objects.create(
+            event=self.event, name="佐藤", visitor_id="visitor-b"
+        )
+
+        response = self.delete(mine.id)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {"participants": [{"id": other.id, "name": "佐藤"}]},
+        )
+        self.assertFalse(Participant.objects.filter(id=mine.id).exists())
+
+    def test_delete_another_visitors_participant_returns_403(self):
+        self.client.cookies["visitor_id"] = "visitor-a"
+        other = Participant.objects.create(
+            event=self.event, name="佐藤", visitor_id="visitor-b"
+        )
+
+        response = self.delete(other.id)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("error", response.json())
+        self.assertTrue(Participant.objects.filter(id=other.id).exists())
+
+    def test_delete_unknown_participant_returns_404(self):
+        response = self.delete(9999)
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {"error": "参加者が見つかりません"})
+
+    def test_delete_participant_for_unknown_event_returns_404(self):
+        response = self.client.delete("/api/events/zzzzzz/participants/1")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {"error": "イベントが見つかりません"})
+
+    def test_delete_participant_with_get_returns_405(self):
+        self.client.cookies["visitor_id"] = "visitor-a"
+        mine = Participant.objects.create(
+            event=self.event, name="山田", visitor_id="visitor-a"
+        )
+
+        response = self.client.get(
+            f"/api/events/{self.event.public_id}/participants/{mine.id}"
+        )
+
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(response.headers["Allow"], "DELETE")
 
 
 class UpdateEventTests(TestCase):
