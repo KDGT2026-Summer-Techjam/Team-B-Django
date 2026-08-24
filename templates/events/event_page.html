@@ -153,7 +153,9 @@
           </div>
         </div>
 
-        <!-- アクションアイコン (DL時は非表示にするためラッパー内に配置) -->
+        <!-- ...スタンプマップエリア等の記述... -->
+
+        <!-- アクションアイコン (DL時は非表示にする) -->
         <div class="card-footer-icons" id="footer-actions">
           <button class="icon-btn" id="btn-download" title="ダウンロード">
             <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>
@@ -163,8 +165,31 @@
           </button>
         </div>
 
+        <!-- ★追加1：透明な落書き用キャンバス（#capture-area の内側の一番下に配置） -->
+        <canvas id="doodle-canvas" class="doodle-layer"></canvas>
+
+      </div> <!-- /#capture-area の閉じタグ -->
+    </div> <!-- /.main-content の閉じタグ -->
+
+    <!-- ★追加2：落書きツールバー（DL画像に入らないよう #capture-area の外に配置） -->
+    <div id="doodle-toolbar" class="doodle-toolbar">
+      <button id="btn-toggle-doodle" class="doodle-btn">✏️ 落書きモード: OFF</button>
+      
+      <div id="doodle-controls" class="doodle-controls hidden">
+        <div class="color-palette">
+          <div class="color-swatch active" data-color="#2F4F2F" style="background: #2F4F2F;"></div> <!-- 深緑 -->
+          <div class="color-swatch" data-color="#800000" style="background: #800000;"></div> <!-- ワインレッド -->
+          <div class="color-swatch" data-color="#8DA0CC" style="background: #8DA0CC;"></div> <!-- 藤色 -->
+          <div class="color-swatch" data-color="#ffffff" style="background: #ffffff; border: 1px solid #ccc;"></div> <!-- 白 -->
+        </div>
+        <div class="weight-control">
+          <span style="font-size: 10px;">太さ:</span>
+          <input type="range" id="pen-weight" min="1" max="10" value="3">
+        </div>
+        <button id="btn-clear-doodle" class="doodle-btn clear-btn">全消し</button>
       </div>
     </div>
   </main>
+
 </body>
 </html>

@@ -317,3 +317,179 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// ==========================================
+  // 4. 落書き（Doodle）機能
+  // ==========================================
+  const captureArea = document.getElementById('capture-area'); 
+  const canvas = document.getElementById('doodle-canvas');
+  const doodleToolbar = document.getElementById('doodle-toolbar');
+  
+  if (canvas && captureArea) {
+    const ctx = canvas.getContext('2d');
+    const btnToggleDoodle = document.getElementById('btn-toggle-doodle');
+    const doodleControls = document.getElementById('doodle-controls');
+    const btnClear = document.getElementById('btn-clear-doodle');
+    const colorSwatches = document.querySelectorAll('.color-swatch');
+    const penWeightInput = document.getElementById('pen-weight');
+
+    let isDrawModeOn = false;
+    let isDrawing = false;
+    let currentX = 0;
+    let currentY = 0;
+    let strokeColor = '#2F4F2F'; // 初期色
+    let strokeWidth = 3;
+
+    // キャンバスのサイズを枠線に合わせる関数
+    function resizeCanvas() {
+      // 描画内容が消えないように一時退避
+      const tempCanvas = document.createElement('canvas');
+      const tCtx = tempCanvas.getContext('2d');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      tCtx.drawImage(canvas, 0, 0);
+
+      // サイズ再設定
+      canvas.width = captureArea.offsetWidth;
+      canvas.height = captureArea.offsetHeight;
+      
+      // 退避した描画内容を復元
+      ctx.drawImage(tempCanvas, 0, 0);
+      
+      // 線の見た目設定を再適用
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+    }
+
+    // 初期化
+    setTimeout(resizeCanvas, 100); // 画面描画が落ち着いてからサイズ取得
+    window.addEventListener('resize', resizeCanvas);
+
+    // モード切替
+    btnToggleDoodle.addEventListener('click', () => {
+      isDrawModeOn = !isDrawModeOn;
+      if (isDrawModeOn) {
+        btnToggleDoodle.textContent = '✏️ 落書きモード: ON';
+        btnToggleDoodle.classList.add('active');
+        doodleControls.classList.remove('hidden');
+        canvas.classList.add('active');
+        document.body.style.overflow = 'hidden'; // 背景のスクロールをロック
+      } else {
+        btnToggleDoodle.textContent = '✏️ 落書きモード: OFF';
+        btnToggleDoodle.classList.remove('active');
+        doodleControls.classList.add('hidden');
+        canvas.classList.remove('active');
+        document.body.style.overflow = ''; // スクロールロック解除
+      }
+    });
+
+    // 座標取得
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      let clientX = e.clientX;
+      let clientY = e.clientY;
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      }
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    // 描画開始
+    function startDrawing(e) {
+      if (!isDrawModeOn) return;
+      isDrawing = true;
+      const pos = getPos(e);
+      currentX = pos.x;
+      currentY = pos.y;
+      
+      // タップしただけでも点が描けるようにする
+      ctx.beginPath();
+      ctx.fillStyle = strokeColor;
+      ctx.arc(currentX, currentY, strokeWidth / 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 描画中
+    function draw(e) {
+      if (!isDrawing || !isDrawModeOn) return;
+      e.preventDefault(); // スマホでの引っ張りスクロールなどを強力に阻止
+      const pos = getPos(e);
+      
+      ctx.beginPath();
+      ctx.moveTo(currentX, currentY);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = strokeWidth;
+      ctx.stroke();
+      ctx.closePath();
+      
+      currentX = pos.x;
+      currentY = pos.y;
+    }
+
+    // 描画終了
+    function stopDrawing() {
+      isDrawing = false;
+    }
+
+    // イベントリスナー登録（スマホの passive: false は preventDefault を使うために必須）
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    window.addEventListener('mouseup', stopDrawing);
+
+    canvas.addEventListener('touchstart', startDrawing, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    window.addEventListener('touchend', stopDrawing);
+
+    // ツールバー操作
+    colorSwatches.forEach(swatch => {
+      swatch.addEventListener('click', (e) => {
+        colorSwatches.forEach(s => s.classList.remove('active'));
+        const target = e.target;
+        target.classList.add('active');
+        strokeColor = target.dataset.color;
+      });
+    });
+
+    penWeightInput.addEventListener('input', (e) => {
+      strokeWidth = e.target.value;
+    });
+
+    btnClear.addEventListener('click', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+  }
+
+  // ★ 既存のダウンロード処理（btnDownload）を少しだけ修正します。
+  // 以下の行を、html2canvas() を呼び出す直前に追加して、ツールバーを隠すようにしてください。
+  if(btnDownload) {
+    btnDownload.addEventListener('click', () => {
+      const footer = document.getElementById('footer-actions');
+      footer.style.display = 'none'; 
+      // ↓↓↓ ここを追加 ↓↓↓
+      if (doodleToolbar) doodleToolbar.style.display = 'none';
+      
+      if (typeof html2canvas !== 'undefined') {
+        html2canvas(captureArea, {
+          scale: 2, 
+          backgroundColor: "#F6F5EF",
+          useCORS: true
+        }).then(canvas => {
+          const link = document.createElement('a');
+          link.download = 'inby-event-card.png';
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+          
+          footer.style.display = 'flex'; 
+          // ↓↓↓ ここを追加 ↓↓↓
+          if (doodleToolbar) doodleToolbar.style.display = 'flex';
+        }).catch(err => {
+          console.error("ダウンロードエラー:", err);
+          footer.style.display = 'flex';
+          // ↓↓↓ ここを追加 ↓↓↓
+          if (doodleToolbar) doodleToolbar.style.display = 'flex';
+        });
+      }
+    });
+  }
