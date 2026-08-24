@@ -30,4 +30,9 @@ urlpatterns = [
     views_api.my_events,
     name="api_my_events",
     ),
+    path(
+    "api/events/<str:public_id>/participants/<int:id>",
+    views_api.delete_participant,
+    name="api_delete_participant",
+    ),
 ]

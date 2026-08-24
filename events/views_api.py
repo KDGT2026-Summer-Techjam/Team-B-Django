@@ -299,6 +299,11 @@ def get_event(request, public_id):
         {"id": participant.id, "name": participant.name}
         for participant in event.participants.order_by("created_at", "id")
     ]
+    my_participant = event.participants.filter(
+            visitor_id=request.visitor_id
+    ).first()
+
+    my_participant_id = my_participant.id if my_participant else None
 
     return JsonResponse(
         {
@@ -311,6 +316,7 @@ def get_event(request, public_id):
             "image": event.image,
             "participants": participants,
             "missions": _missions_json(event),
+            "my_participant_id": my_participant_id,
         }
     )
 
@@ -582,4 +588,39 @@ def my_events(request):
                 for event in events
             ]
         }
+    )
+
+def delete_participant(request, public_id, id):
+    if request.method != "DELETE":
+        return HttpResponseNotAllowed(["DELETE"])
+
+    try:
+        event = Event.objects.get(public_id=public_id)
+    except Event.DoesNotExist:
+        return JsonResponse({"error": "イベントが見つかりません"}, status=404)
+
+    try:
+        participant = event.participants.get(id=id)
+    except Participant.DoesNotExist:
+        return JsonResponse({"error": "参加者が見つかりません"}, status=404)
+
+    # 自分自身の参加だけ取り消せるようにする。
+    if not request.visitor_id or participant.visitor_id != request.visitor_id:
+        return JsonResponse(
+            {"error": "参加を取り消す権限がありません"},
+            status=403,
+        )
+
+    participant.delete()
+
+    participants = [
+        {"id": participant.id, "name": participant.name}
+        for participant in event.participants.order_by("created_at", "id")
+    ]
+
+    return JsonResponse(
+        {
+            "participants": participants
+        },
+        status=200,
     )

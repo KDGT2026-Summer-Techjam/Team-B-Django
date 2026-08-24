@@ -22,7 +22,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const nameInputEl = document.getElementById('event-name-input');
   const joinBtnEl = document.getElementById('event-join-btn');
   const errorEl = document.getElementById('event-error');
-  
+  const cancelJoinBtnEl = document.getElementById('event-cancel-join-btn');
+
+  let currentParticipantId = null; //現在のブラウザで参加しているParticipantのIDを保持
   let currentEventData = {}; // 編集用に現在のデータを保持
   let isEditing = false; // 編集モードの判定
 
@@ -46,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderEventDetails(data) {
     document.getElementById('event-title').textContent = data.title;
     document.getElementById('event-date').textContent = data.event_date.replace(/-/g, '/');
-    
+
     // 残り日数の計算
     const target = new Date(`${data.event_date}T00:00:00`);
     const today = new Date();
@@ -54,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const diffDays = Math.round((target - today) / (1000 * 60 * 60 * 24));
     let daysText = diffDays > 0 ? `あと${diffDays}日` : diffDays === 0 ? '今日' : '終了';
     document.getElementById('event-days-left').textContent = daysText;
-    
+
     document.getElementById('event-location').textContent = data.location;
     document.getElementById('event-author').textContent = `${data.organizer_name} が誘っています`;
     renderParticipants(data.participants || []);
@@ -70,12 +72,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // 参加中/未参加に応じて参加フォームと取り消しボタンの表示を切り替える
+  function applyParticipationState(participantId) {
+    currentParticipantId = participantId || null;
+    const joined = !!currentParticipantId;
+    joinBtnEl.hidden = joined;
+    nameInputEl.hidden = joined;
+    cancelJoinBtnEl.hidden = !joined;
+  }
+
   async function loadEvent() {
     try {
       const res = await fetch(`/api/events/${publicId}`);
       if (res.ok) {
         currentEventData = await res.json();
         renderEventDetails(currentEventData);
+        applyParticipationState(currentEventData.my_participant_id);
       }
     } catch (e) { console.error(e); }
   }
@@ -169,13 +181,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (res.ok) {
         const data = await res.json();
         // 現在のデータにも参加者を反映
+        applyParticipationState(data.id);
+
         if (data.participants && Array.isArray(data.participants)) {
           currentEventData.participants = data.participants;
-        } else {
-          currentEventData.participants.push({ name: name }); 
         }
+
         renderParticipants(currentEventData.participants);
-        nameInputEl.value = ''; 
+        nameInputEl.value = '';
       } else {
         if (errorEl) { errorEl.textContent = 'エラーが発生しました'; errorEl.hidden = false; }
       }
@@ -185,6 +198,68 @@ document.addEventListener('DOMContentLoaded', () => {
       joinBtnEl.disabled = false;
     }
   });
+
+  // 参加取り消しボタンの処理
+  if (cancelJoinBtnEl) {
+    cancelJoinBtnEl.addEventListener('click', async () => {
+      if (!currentParticipantId) {
+        if (errorEl) {
+          errorEl.textContent = '参加者情報を取得できませんでした';
+          errorEl.hidden = false;
+        }
+        return;
+      }
+
+      cancelJoinBtnEl.disabled = true;
+
+      try {
+        const headers = {};
+        const csrfToken = getCookie('csrftoken');
+
+        if (csrfToken) {
+          headers['X-CSRFToken'] = csrfToken;
+        }
+
+        const res = await fetch(
+          `/api/events/${publicId}/participants/${currentParticipantId}`,
+          {
+            method: 'DELETE',
+            headers: headers
+          }
+        );
+
+        if (res.ok) {
+          const data = await res.json();
+
+          currentEventData.participants = data.participants || [];
+          renderParticipants(currentEventData.participants);
+
+          applyParticipationState(null);
+
+          if (errorEl) {
+            errorEl.textContent = '';
+            errorEl.hidden = true;
+          }
+        } else {
+          const data = await res.json();
+
+          if (errorEl) {
+            errorEl.textContent = data.error || '参加の取り消しに失敗しました';
+            errorEl.hidden = false;
+          }
+        }
+      } catch (e) {
+        console.error(e);
+
+        if (errorEl) {
+          errorEl.textContent = '通信エラーが発生しました';
+          errorEl.hidden = false;
+        }
+      } finally {
+        cancelJoinBtnEl.disabled = false;
+      }
+    });
+  }
 
   loadEvent();
 
