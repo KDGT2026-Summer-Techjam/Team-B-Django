@@ -176,6 +176,13 @@ main {
   box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
 }
 
+.map-placeholder img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
 .join-action-wrapper { 
   width: 100%; 
   margin-top: 8px; /* 画像とフォームの隙間 */

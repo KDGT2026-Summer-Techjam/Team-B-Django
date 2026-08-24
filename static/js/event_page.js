@@ -58,6 +58,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('event-location').textContent = data.location;
     document.getElementById('event-author').textContent = `${data.organizer_name} が誘っています`;
     renderParticipants(data.participants || []);
+
+    // イベント画像の表示
+    const imageEl = document.getElementById('event-image');
+    if (data.image) {
+      imageEl.src = data.image;
+      imageEl.style.display = 'block';
+    } else {
+      imageEl.removeAttribute('src');
+      imageEl.style.display = 'none';
+    }
   }
 
   async function loadEvent() {
