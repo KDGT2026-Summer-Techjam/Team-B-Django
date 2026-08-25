@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let currentParticipantId = null; //現在のブラウザで参加しているParticipantのIDを保持
   let currentEventData = {}; // 編集用に現在のデータを保持
+  const missionIdByOrder = {}; // ミッションのorder番号 -> Mission.id（写真アップロードAPIに必要）
 
   function renderParticipants(participants) {
     document.getElementById('event-member-count').textContent = `${participants.length}人`;
@@ -96,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentEventData = await res.json();
         renderEventDetails(currentEventData);
         applyParticipationState(currentEventData.my_participant_id);
+        restoreMissionProgress(currentEventData.missions);
       }
     } catch (e) { console.error(e); }
   }
@@ -249,16 +251,53 @@ document.addEventListener('DOMContentLoaded', () => {
       fileInput.addEventListener('change', (e) => {
         if (e.target.files && e.target.files[0]) {
           const reader = new FileReader();
-          reader.onload = (event) => {
+          reader.onload = async (event) => {
+            const photoDataUrl = event.target.result;
             const img = document.getElementById(`preview-${i}`);
-            img.src = event.target.result;
+            const label = document.querySelector(`#photo-box-${i} .photo-label`);
+
+            img.src = photoDataUrl;
             img.style.display = 'block';
-            document.querySelector(`#photo-box-${i} .photo-label`).style.display = 'none';
-            
-            setNodeDone(i);
-            
-            if(i < 3) {
-              animatePathToNext(i);
+            if (label) label.style.display = 'none';
+
+            const missionId = missionIdByOrder[i];
+            if (!missionId) {
+              alert('ミッション情報を取得できませんでした。ページを再読み込みしてください');
+              return;
+            }
+
+            fileInput.disabled = true;
+            try {
+              const headers = { 'Content-Type': 'application/json' };
+              const csrfToken = getCookie('csrftoken');
+              if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+
+              const res = await fetch(`/api/events/${publicId}/missions/${missionId}/photo`, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({ photo: photoDataUrl })
+              });
+
+              if (res.ok) {
+                setNodeDone(i);
+
+                if (i < 3) {
+                  animatePathToNext(i);
+                }
+              } else {
+                const data = await res.json().catch(() => ({}));
+                alert(data.error || '写真の登録に失敗しました');
+                img.style.display = 'none';
+                img.removeAttribute('src');
+                if (label) label.style.display = 'flex';
+              }
+            } catch (err) {
+              alert('通信エラーが発生しました');
+              img.style.display = 'none';
+              img.removeAttribute('src');
+              if (label) label.style.display = 'flex';
+            } finally {
+              fileInput.disabled = false;
             }
           }
           reader.readAsDataURL(e.target.files[0]);
@@ -280,14 +319,23 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById(`m-icon-${num}`).textContent = '📷';
   }
 
-  function setNodeDone(num) {
+  // photoUrl指定時は写真プレビューも復元する（ページ読み込み時の状態復元用）
+  function setNodeDone(num, photoUrl) {
     const node = document.getElementById(`node-${num}`);
     node.className = `map-node node-${num} done`;
     node.innerHTML = `<div class="node-icon">✔</div><div class="node-num">✔</div>`;
-    
+
     const pBox = document.getElementById(`photo-box-${num}`);
     pBox.className = `photo-box pb-${num} done`;
-    
+
+    if (photoUrl) {
+      const img = document.getElementById(`preview-${num}`);
+      const label = document.querySelector(`#photo-box-${num} .photo-label`);
+      img.src = photoUrl;
+      img.style.display = 'block';
+      if (label) label.style.display = 'none';
+    }
+
     const mRow = document.querySelector(`.mission-row[data-mission="${num}"]`);
     mRow.className = `mission-row done`;
     document.getElementById(`m-icon-${num}`).textContent = '✔';
@@ -295,12 +343,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function animatePathToNext(currentNum) {
     if (!activePath) return;
-    const offset = currentNum === 1 ? (pathLength * 0.5) : 0; 
+    const offset = currentNum === 1 ? (pathLength * 0.5) : 0;
     activePath.style.strokeDashoffset = offset;
-    
+
     setTimeout(() => {
       currentMission = currentNum + 1;
     }, 1500);
+  }
+
+  // ページ読み込み時、サーバーに保存済みのミッション進行状況を画面に復元する
+  function restoreMissionProgress(missions) {
+    if (!Array.isArray(missions) || missions.length === 0) return;
+
+    let firstIncompleteOrder = null;
+
+    missions.forEach(mission => {
+      missionIdByOrder[mission.order] = mission.id;
+      if (mission.completed_at) {
+        setNodeDone(mission.order, mission.photo);
+      } else if (firstIncompleteOrder === null) {
+        firstIncompleteOrder = mission.order;
+      }
+    });
+
+    // 軌跡の線の進捗も、animatePathToNextと同じルールで完了状況に合わせて描画する
+    if (activePath) {
+      const isDone = order => missions.some(m => m.order === order && m.completed_at);
+      if (isDone(2)) {
+        activePath.style.strokeDashoffset = 0;
+      } else if (isDone(1)) {
+        activePath.style.strokeDashoffset = pathLength * 0.5;
+      }
+    }
+
+    if (firstIncompleteOrder !== null) {
+      currentMission = firstIncompleteOrder;
+      setNodeActive(firstIncompleteOrder);
+    }
   }
 
   // ==========================================
