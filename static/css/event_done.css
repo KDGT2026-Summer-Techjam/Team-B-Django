@@ -102,6 +102,22 @@
   stroke: #EC8A76;
 }
 
+/* イベントデータの取得が終わるまでコピー・シェアボタンを無効化している間の見た目 */
+.icon-btn:disabled {
+  cursor: default;
+}
+
+.icon-btn:disabled svg {
+  stroke: #ccc;
+}
+
+/* コピー完了時に一瞬アイコンの色を変えるフィードバック */
+/* .icon-btn:hover svg より詳細度を上げ、クリック後もカーソルがボタン上に
+   残っているケース（マウス操作の通常経路）でhoverの色に負けないようにする */
+.icon-btn.icon-btn--done svg {
+  stroke: #4CAF50;
+}
+
 .btn-return {
   position: absolute;
   bottom: 50px;

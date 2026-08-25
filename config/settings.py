@@ -3,6 +3,7 @@ Django settings for config project.
 """
 
 import os
+import sys
 from pathlib import Path
 
 import dj_database_url
@@ -32,6 +33,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "events.middleware.VisitorIdMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -81,13 +83,25 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+# テスト実行時はDjangoがDEBUGを強制的にFalseにするため、
+# collectstatic未実行の環境ではCompressedManifestStaticFilesStorageが
+# manifestを参照できずエラーになる。テスト時だけmanifest不要のstorageに切り替える
 STORAGES = {
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if "test" in sys.argv
+            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        ),
     },
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ミッション写真(Base64)を含むリクエストを受け取るための上限。
+# Djangoの既定は2.5MBで、超えるとビューに到達する前に400になる。
+# 写真の上限5MBに対し、JSONのキーやdata URLの接頭辞の分だけ余裕を持たせる
+DATA_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
 
 # Render のリバースプロキシ経由の HTTPS 判定
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

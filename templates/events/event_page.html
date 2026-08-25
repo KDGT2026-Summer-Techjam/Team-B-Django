@@ -1,111 +1,202 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>誘いのページ - Inby</title>
-  <!-- 共通CSSの読み込み -->
   <link rel="stylesheet" href="{% static 'css/common.css' %}">
-  <!-- このページ専用の追加CSS -->
-  <link rel="stylesheet" href="{% static 'css/event_page.css' %}">
+  <!-- キャッシュ回避のためのパラメータを付与 -->
+  <link rel="stylesheet" href="{% static 'css/event_page.css' %}?v=6">
+
+  <!-- 画像ダウンロード用のライブラリ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <script src="{% static 'js/script.js' %}" defer></script>
   <script src="{% static 'js/event_page.js' %}" defer></script>
 </head>
-
 <body data-public-id="{{ public_id }}" data-is-participant="{{ is_participant|yesno:"true,false" }}">
-  <!-- docs/設計.md「CSRFの扱い」: JSはdocument.cookieのcsrftokenを読み、
-  X-CSRFTokenヘッダに付けてfetchする。このタグでCookieを発行する -->
   {% csrf_token %}
 
-  <!-- サイドバー -->
   <div id="sidebar-trigger" class="sidebar-trigger"></div>
-
   <aside id="sidebar" class="sidebar">
     <ul class="menu">
-      <li>
-        <a href="{% url 'home' %}" class="sidebar-link">
-          <svg viewBox="0 0 24 24">
-            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-          </svg>
-          home
-        </a>
-      </li>
-      <li>
-        <a href="{% url 'new_event' %}" class="sidebar-link">
-          <svg viewBox="0 0 24 24">
-            <path d="M4 4h16v2H4zm0 6h16v2H4zm0 6h16v2H4z" />
-          </svg>
-          create
-        </a>
-      </li>
-      <li>
-        <a href="{% url 'my_events_list' %}" class="sidebar-link">
-          <svg viewBox="0 0 24 24">
-            <path
-              d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-          </svg>
-          my card
-        </a>
-      </li>
+      <li><a href="{% url 'home' %}" class="sidebar-link"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" /></svg>home</a></li>
+      <li><a href="{% url 'new_event' %}" class="sidebar-link"><svg viewBox="0 0 24 24"><path d="M4 4h16v2H4zm0 6h16v2H4zm0 6h16v2H4z" /></svg>create</a></li>
+      <li><a href="{% url 'my_events_list' %}" class="sidebar-link"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>my card</a></li>
     </ul>
   </aside>
 
-  <!-- main -->
   <main>
     <div class="main-content">
-      <div class="card-container">
-
-        <div class="card-content">
-
-          <!-- 左側のテキスト入力エリア -->
-          <div class="text-section">
-            <h1 id="event-title">タイトル</h1>
-            <p id="event-date">YYYY/MM/DD</p>
-            <p id="event-days-left">(予定日までの日にち)</p>
-            <!-- Eventモデルに開始時刻が無いため、フィールド追加までは隠しておく -->
-            <p id="event-time" hidden>hh:mm</p>
-            <p id="event-location">場所</p>
-            <p id="event-author">投稿者</p>
-
-            <div class="members-area">
-              <div class="member-header">
-                <span>メンバー</span>
-
-                <!-- js で内容変更する -->
-                <span id="event-member-count">〇人</span>
+      <!-- DL時にこのコンテナ全体を画像化します -->
+      <div class="event-page-container" id="capture-area">
+        
+        <!-- ================= 上部：イベント詳細 ================= -->
+        <div class="event-header-card">
+          <div class="header-inner">
+            <!-- 左側：テキストエリア -->
+            <div class="text-section">
+              <h1 id="event-title">タイトル</h1>
+              <div class="date-row">
+                <p id="event-date">YYYY/MM/DD</p>
+                <p id="event-days-left">あと3日</p>
+              </div>
+              <p id="event-time" hidden>hh:mm</p>
+              
+              <div class="info-group">
+                <span class="info-label">場所</span>
+                <p id="event-location">場所</p>
+              </div>
+              <div class="info-group">
+                <span class="info-label">投稿者</span>
+                <p id="event-author">投稿者</p>
               </div>
 
-              <!-- js で内容変更する -->
-              <ul class="input-members" id="event-member-list">
-                <li>読み込み中...</li>
-              </ul>
+              <div class="members-area">
+                <div class="member-header">
+                  <span>メンバー</span>
+                  <span id="event-member-count" class="member-count-small">0人</span>
+                </div>
+                <ul class="input-members" id="event-member-list">
+                  <li>読み込み中...</li>
+                </ul>
+              </div>
             </div>
 
-            <!-- 参加後だけ表示する完了の合図 -->
-            <p id="event-joined-message" class="joined-message" hidden>参加しました</p>
+            <!-- 右側：画像＆参加エリア -->
+            <div class="action-section">
+              <!-- 編集は専用画面（開始時刻・画像にも対応）に集約する。権限が無い場合は編集画面側で403になる -->
+              <a class="btn-edit" href="{% url 'event_edit' public_id=public_id %}">編集</a>
+              
+              <div class="map-placeholder">
+                <img id="event-image" alt="イベント画像" style="display: none;">
+              </div>
+              
+              <div class="join-action-wrapper">
+                <div class="join-area" id="event-join-area">
+                  <input type="text" id="event-name-input" placeholder="名前 |" maxlength="255">
+                  <button class="btn-complete" id="event-join-btn">参加する</button>
+                </div>
 
-            <!-- 参加前だけ表示する名前入力欄 -->
-            <div class="join-area" id="event-join-area" hidden>
-              <label class="join-label" for="event-name-input">名前</label>
-              <input type="text" id="event-name-input" placeholder="名前を入力" maxlength="255">
-              <p class="error-msg" id="event-error" hidden></p>
+                <button class="btn-cancel-join" id="event-cancel-join-btn" hidden>
+                  参加を取り消す
+                </button>
+
+                <p class="error-msg" id="event-error" hidden></p>
+              </div>
             </div>
           </div>
-
-          <!-- 右側の画像エリア -->
-          <div class="image-section">
-            <svg viewBox="0 0 24 24">
-              <path
-                d="M19,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3M19,19H5V5H19V19M13.96,12.29L11.21,15.83L9.25,13.47L6.5,17H17.5L13.96,12.29Z" />
-            </svg>
-          </div>
-          <button class="btn-complete" id="event-join-btn" hidden>参加する</button>
         </div>
+
+        <!-- ================= 下部：スタンプラリー ================= -->
+        <div class="stamp-rally-card">
+          <div class="sr-header">
+            <h2>STAMP RALLY</h2>
+          </div>
+          
+          <!-- ミッション入力リスト -->
+          <div class="missions-container">
+            <div class="mission-row" data-mission="1">
+              <span class="m-icon" id="m-icon-1">🔒</span>
+              <span>ミッション 1</span>
+              <input type="text" class="mission-input" readonly>
+            </div>
+            <div class="mission-row" data-mission="2">
+              <span class="m-icon" id="m-icon-2">🔒</span>
+              <span>ミッション 2</span>
+              <input type="text" class="mission-input" readonly>
+            </div>
+            <div class="mission-row" data-mission="3">
+              <span class="m-icon" id="m-icon-3">🔒</span>
+              <span>ミッション 3</span>
+              <input type="text" class="mission-input" readonly>
+            </div>
+          </div>
+
+          <!-- スタンプマップエリア -->
+          <div class="rally-map-container">
+            <!-- 軌跡の線（背景用） -->
+            <svg class="map-path-bg" viewBox="0 0 360 480">
+              <path d="M 90 90 Q 220 120 270 240 Q 220 370 100 400" fill="transparent" stroke="#E2E8F0" stroke-width="6" stroke-dasharray="10 10" />
+            </svg>
+            <!-- 軌跡の線（アニメーション進行用） -->
+            <svg class="map-path-active" viewBox="0 0 360 480">
+              <path id="active-path" d="M 90 90 Q 220 120 270 240 Q 220 370 100 400" fill="transparent" stroke="#B2D235" stroke-width="6" stroke-dasharray="10 10" />
+            </svg>
+
+            <!-- Node 1 -->
+            <div class="map-node node-1 locked" id="node-1">
+              <div class="node-icon">🔒</div>
+              <div class="node-num">1</div>
+            </div>
+            <div class="photo-box pb-1 hidden" id="photo-box-1">
+              <input type="file" accept="image/*" class="file-input" id="file-1">
+              <label for="file-1" class="photo-label">＋<br>写真1</label>
+              <img src="" class="preview-img" id="preview-1">
+            </div>
+
+            <!-- Node 2 -->
+            <div class="map-node node-2 hidden" id="node-2">
+              <div class="node-icon">🔒</div>
+              <div class="node-num">2</div>
+            </div>
+            <div class="photo-box pb-2 hidden" id="photo-box-2">
+              <input type="file" accept="image/*" class="file-input" id="file-2">
+              <label for="file-2" class="photo-label">＋<br>写真2</label>
+              <img src="" class="preview-img" id="preview-2">
+            </div>
+
+            <!-- Node 3 -->
+            <div class="map-node node-3 hidden" id="node-3">
+              <div class="node-icon">🔒</div>
+              <div class="node-num">3</div>
+            </div>
+            <div class="photo-box pb-3 hidden" id="photo-box-3">
+              <input type="file" accept="image/*" class="file-input" id="file-3">
+              <label for="file-3" class="photo-label">＋<br>写真3</label>
+              <img src="" class="preview-img" id="preview-3">
+            </div>
+          </div>
+        </div>
+
+        <!-- ...スタンプマップエリア等の記述... -->
+
+        <!-- アクションアイコン (DL時は非表示にする) -->
+        <div class="card-footer-icons" id="footer-actions">
+          <button class="icon-btn" id="btn-download" title="ダウンロード">
+            <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>
+          </button>
+          <button class="icon-btn" id="btn-copy" title="URLコピー">
+            <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+          </button>
+        </div>
+
+        <!-- ★追加1：透明な落書き用キャンバス（#capture-area の内側の一番下に配置） -->
+        <canvas id="doodle-canvas" class="doodle-layer"></canvas>
+
+      </div> <!-- /#capture-area の閉じタグ -->
+    </div> <!-- /.main-content の閉じタグ -->
+
+    <!-- ★追加2：落書きツールバー（DL画像に入らないよう #capture-area の外に配置） -->
+    <div id="doodle-toolbar" class="doodle-toolbar">
+      <button id="btn-toggle-doodle" class="doodle-btn">✏️ 落書きモード: OFF</button>
+      
+      <div id="doodle-controls" class="doodle-controls hidden">
+        <div class="color-palette">
+          <div class="color-swatch active" data-color="#2F4F2F" style="background: #2F4F2F;"></div> <!-- 深緑 -->
+          <div class="color-swatch" data-color="#800000" style="background: #800000;"></div> <!-- ワインレッド -->
+          <div class="color-swatch" data-color="#8DA0CC" style="background: #8DA0CC;"></div> <!-- 藤色 -->
+          <div class="color-swatch" data-color="#ffffff" style="background: #ffffff; border: 1px solid #ccc;"></div> <!-- 白 -->
+        </div>
+        <div class="weight-control">
+          <span style="font-size: 10px;">太さ:</span>
+          <input type="range" id="pen-weight" min="1" max="10" value="3">
+        </div>
+        <button id="btn-clear-doodle" class="doodle-btn clear-btn">全消し</button>
       </div>
     </div>
   </main>
-</body>
 
+</body>
 </html>

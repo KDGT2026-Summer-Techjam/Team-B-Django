@@ -1,16 +1,36 @@
+import base64
 import json
-from datetime import date
+from datetime import date, datetime, timedelta
+from unittest.mock import patch
+from pathlib import Path
 
+from django.conf import settings
+from django.db import IntegrityError
 from django.test import TestCase
+from django.utils import timezone
 
-from .models import Event, Participant
+from .models import (
+    PUBLIC_ID_MAX_ATTEMPTS,
+    Event,
+    Mission,
+    Participant,
+    PublicIdCollisionError,
+)
+
+
+def future_date_str(month, day):
+    """指定した月日のうち、今日より後になる直近の年の日付文字列を返す。季節判定テストで過去日付を避けるために使う。"""
+    today = timezone.localtime().date()
+    year = today.year if date(today.year, month, day) > today else today.year + 1
+    return date(year, month, day).isoformat()
 
 
 class CreateEventTests(TestCase):
     def setUp(self):
+        self.future_date = timezone.localtime().date() + timedelta(days=1)
         self.payload = {
             "title": "長岡花火大会",
-            "event_date": "2026-08-22",
+            "event_date": self.future_date.isoformat(),
             "location": "新潟県長岡市",
             "organizer_name": "田中",
         }
@@ -28,7 +48,7 @@ class CreateEventTests(TestCase):
         self.assertEqual(response.status_code, 201)
         event = Event.objects.get()
         self.assertEqual(event.title, "長岡花火大会")
-        self.assertEqual(event.event_date, date(2026, 8, 22))
+        self.assertEqual(event.event_date, self.future_date)
         self.assertEqual(event.location, "新潟県長岡市")
         self.assertEqual(event.organizer_name, "田中")
         self.assertEqual(
@@ -66,6 +86,46 @@ class CreateEventTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("error", response.json())
         self.assertFalse(Event.objects.exists())
+
+    def test_past_event_date_returns_400(self):
+        self.payload["event_date"] = (self.future_date - timedelta(days=2)).isoformat()
+
+        response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+        self.assertFalse(Event.objects.exists())
+
+    def test_today_with_past_start_time_returns_400(self):
+        fixed_now = timezone.make_aware(datetime(2026, 8, 23, 12, 0))
+        with patch("events.views_api.timezone.localtime", return_value=fixed_now):
+            self.payload["event_date"] = fixed_now.date().isoformat()
+            self.payload["start_time"] = "09:00"
+
+            response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+        self.assertFalse(Event.objects.exists())
+
+    def test_today_with_future_start_time_returns_201(self):
+        fixed_now = timezone.make_aware(datetime(2026, 8, 23, 12, 0))
+        with patch("events.views_api.timezone.localtime", return_value=fixed_now):
+            self.payload["event_date"] = fixed_now.date().isoformat()
+            self.payload["start_time"] = "18:00"
+
+            response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 201)
+
+    def test_today_without_start_time_is_allowed(self):
+        fixed_now = timezone.make_aware(datetime(2026, 8, 23, 12, 0))
+        with patch("events.views_api.timezone.localtime", return_value=fixed_now):
+            self.payload["event_date"] = fixed_now.date().isoformat()
+
+            response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 201)
 
     def test_empty_organizer_name_returns_400(self):
         self.payload["organizer_name"] = "   "
@@ -151,6 +211,31 @@ class CreateEventTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(Event.objects.get().title, "長岡花火大会")
 
+    def test_create_event_registers_creator_as_participant(self):
+        """作成者自身も参加者一覧に含まれるよう、Participantとして登録する。"""
+        self.client.cookies["visitor_id"] = "creator-a"
+
+        self.post(self.payload)
+
+        participant = Participant.objects.get()
+        self.assertEqual(participant.name, "田中")
+        self.assertEqual(participant.visitor_id, "creator-a")
+        self.assertEqual(participant.event, Event.objects.get())
+
+    def test_creator_joining_own_event_does_not_duplicate_participant(self):
+        """作成者が改めて参加登録しても、同一visitor_idなので重複登録されない。"""
+        self.client.cookies["visitor_id"] = "creator-a"
+        public_id = self.post(self.payload).json()["public_id"]
+
+        response = self.client.post(
+            f"/api/events/{public_id}/participants",
+            data=json.dumps({"name": "田中"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Participant.objects.count(), 1)
+
 
 class GetEventTests(TestCase):
     def setUp(self):
@@ -174,15 +259,33 @@ class GetEventTests(TestCase):
                 "public_id": self.event.public_id,
                 "title": "長岡花火大会",
                 "event_date": "2026-08-22",
+                "start_time": None,
                 "location": "新潟県長岡市",
                 "organizer_name": "田中",
+                "image": None,
                 "participants": [
                     {"id": first.id, "name": "佐藤"},
                     {"id": second.id, "name": "鈴木"},
                 ],
+                "missions": [],
+                "my_participant_id": None,
             },
         )
         self.assertNotIn("user", response.json())
+
+    def test_get_event_returns_my_participant_id_for_matching_visitor(self):
+        self.client.cookies["visitor_id"] = "visitor-a"
+        mine = Participant.objects.create(
+            event=self.event, name="佐藤", visitor_id="visitor-a"
+        )
+        Participant.objects.create(
+            event=self.event, name="鈴木", visitor_id="visitor-b"
+        )
+
+        response = self.client.get(f"/api/events/{self.event.public_id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["my_participant_id"], mine.id)
 
     def test_get_event_returns_empty_participants(self):
         response = self.client.get(f"/api/events/{self.event.public_id}")
@@ -370,6 +473,25 @@ class JoinEventTests(TestCase):
         self.assertEqual(Participant.objects.count(), 1)
         self.assertEqual(first_response.json(), second_response.json())
 
+    def test_join_event_twice_with_same_visitor_id_and_different_name_renames_participant(self):
+        first_response = self.post({"name": "山田"})
+        second_response = self.post({"name": "佐藤"})
+
+        self.assertEqual(first_response.status_code, 201)
+        self.assertEqual(second_response.status_code, 200)
+        self.assertEqual(Participant.objects.count(), 1)
+
+        participant = Participant.objects.get()
+        self.assertEqual(participant.name, "佐藤")
+        self.assertEqual(
+            second_response.json(),
+            {
+                "id": participant.id,
+                "name": "佐藤",
+                "participants": [{"id": participant.id, "name": "佐藤"}],
+            },
+        )
+
     def test_join_event_with_different_visitor_id_creates_another_participant(self):
         self.client.cookies["visitor_id"] = "visitor-a"
         self.post({"name": "山田"})
@@ -411,6 +533,76 @@ class JoinEventTests(TestCase):
         self.assertEqual(response.headers["Allow"], "POST")
 
 
+class DeleteParticipantTests(TestCase):
+    def setUp(self):
+        self.event = Event.objects.create(
+            title="長岡花火大会",
+            event_date="2026-08-22",
+            location="新潟県長岡市",
+            organizer_name="田中",
+        )
+
+    def delete(self, participant_id):
+        return self.client.delete(
+            f"/api/events/{self.event.public_id}/participants/{participant_id}"
+        )
+
+    def test_delete_own_participant_removes_it_and_returns_remaining_list(self):
+        self.client.cookies["visitor_id"] = "visitor-a"
+        mine = Participant.objects.create(
+            event=self.event, name="山田", visitor_id="visitor-a"
+        )
+        other = Participant.objects.create(
+            event=self.event, name="佐藤", visitor_id="visitor-b"
+        )
+
+        response = self.delete(mine.id)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {"participants": [{"id": other.id, "name": "佐藤"}]},
+        )
+        self.assertFalse(Participant.objects.filter(id=mine.id).exists())
+
+    def test_delete_another_visitors_participant_returns_403(self):
+        self.client.cookies["visitor_id"] = "visitor-a"
+        other = Participant.objects.create(
+            event=self.event, name="佐藤", visitor_id="visitor-b"
+        )
+
+        response = self.delete(other.id)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("error", response.json())
+        self.assertTrue(Participant.objects.filter(id=other.id).exists())
+
+    def test_delete_unknown_participant_returns_404(self):
+        response = self.delete(9999)
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {"error": "参加者が見つかりません"})
+
+    def test_delete_participant_for_unknown_event_returns_404(self):
+        response = self.client.delete("/api/events/zzzzzz/participants/1")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {"error": "イベントが見つかりません"})
+
+    def test_delete_participant_with_get_returns_405(self):
+        self.client.cookies["visitor_id"] = "visitor-a"
+        mine = Participant.objects.create(
+            event=self.event, name="山田", visitor_id="visitor-a"
+        )
+
+        response = self.client.get(
+            f"/api/events/{self.event.public_id}/participants/{mine.id}"
+        )
+
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(response.headers["Allow"], "DELETE")
+
+
 class UpdateEventTests(TestCase):
     def setUp(self):
         self.event = Event.objects.create(
@@ -420,21 +612,21 @@ class UpdateEventTests(TestCase):
             organizer_name="田中",
             creator_visitor_id="creator",
         )
+        self.updated_event_date = timezone.localtime().date() + timedelta(days=1)
         self.payload = {
             "title": "長岡花火大会（雨天順延）",
-            "event_date": "2026-08-23",
+            "event_date": self.updated_event_date.isoformat(),
             "location": "新潟県長岡市 信濃川河川敷",
             "organizer_name": "田中太郎",
         }
 
     def patch(self, payload, token=None):
-        url = f"/api/events/{self.event.public_id}"
-        if token is not None:
-            url = f"{url}?edit_token={token}"
+        headers = {} if token is None else {"X-Edit-Token": token}
         return self.client.patch(
-            url,
+            f"/api/events/{self.event.public_id}",
             data=json.dumps(payload),
             content_type="application/json",
+            headers=headers,
         )
 
     def test_creator_visitor_can_update_event(self):
@@ -445,7 +637,7 @@ class UpdateEventTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.event.refresh_from_db()
         self.assertEqual(self.event.title, "長岡花火大会（雨天順延）")
-        self.assertEqual(self.event.event_date, date(2026, 8, 23))
+        self.assertEqual(self.event.event_date, self.updated_event_date)
         self.assertEqual(self.event.location, "新潟県長岡市 信濃川河川敷")
         self.assertEqual(self.event.organizer_name, "田中太郎")
         self.assertEqual(
@@ -453,12 +645,89 @@ class UpdateEventTests(TestCase):
             {
                 "public_id": self.event.public_id,
                 "title": "長岡花火大会（雨天順延）",
-                "event_date": "2026-08-23",
+                "event_date": self.updated_event_date.isoformat(),
+                "start_time": None,
                 "location": "新潟県長岡市 信濃川河川敷",
                 "organizer_name": "田中太郎",
+                "image": None,
                 "participants": [],
             },
         )
+
+    def test_edit_token_in_query_is_rejected(self):
+        """URLのクエリでトークンを渡す経路は廃止した。"""
+        self.client.cookies["visitor_id"] = "someone-else"
+
+        response = self.client.patch(
+            f"/api/events/{self.event.public_id}?edit_token={self.event.edit_token}",
+            data=json.dumps(self.payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.title, "長岡花火大会")
+
+    def test_edit_token_in_body_allows_update(self):
+        self.client.cookies["visitor_id"] = "someone-else"
+        payload = {**self.payload, "edit_token": self.event.edit_token}
+
+        response = self.client.patch(
+            f"/api/events/{self.event.public_id}",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.title, "長岡花火大会（雨天順延）")
+
+    def test_edit_token_in_body_is_not_saved_as_a_field(self):
+        self.client.cookies["visitor_id"] = "someone-else"
+        before_token = self.event.edit_token
+        payload = {"title": "長岡花火大会2026", "edit_token": before_token}
+
+        response = self.client.patch(
+            f"/api/events/{self.event.public_id}",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.edit_token, before_token)
+        self.assertNotIn("edit_token", response.json())
+
+    def test_non_string_edit_token_in_body_returns_403(self):
+        """ボディは文字列以外も届くため、型が違うトークンは不一致として扱う。"""
+        self.client.cookies["visitor_id"] = "someone-else"
+
+        for token in (12345, True, ["x"], {"a": 1}, None):
+            with self.subTest(token=token):
+                payload = {**self.payload, "edit_token": token}
+
+                response = self.client.patch(
+                    f"/api/events/{self.event.public_id}",
+                    data=json.dumps(payload),
+                    content_type="application/json",
+                )
+
+                self.assertEqual(response.status_code, 403)
+                self.event.refresh_from_db()
+                self.assertEqual(self.event.title, "長岡花火大会")
+
+    def test_edit_token_header_takes_priority_over_body(self):
+        self.client.cookies["visitor_id"] = "someone-else"
+        payload = {**self.payload, "edit_token": "wrong-token"}
+
+        response = self.client.patch(
+            f"/api/events/{self.event.public_id}",
+            data=json.dumps(payload),
+            content_type="application/json",
+            headers={"X-Edit-Token": self.event.edit_token},
+        )
+
+        self.assertEqual(response.status_code, 200)
 
     def test_edit_token_allows_update_from_another_visitor(self):
         self.client.cookies["visitor_id"] = "someone-else"
@@ -487,6 +756,52 @@ class UpdateEventTests(TestCase):
         self.assertEqual(self.event.location, "新潟県長岡市")
         self.assertEqual(self.event.event_date, date(2026, 8, 22))
 
+    def test_update_event_date_to_past_returns_400(self):
+        self.client.cookies["visitor_id"] = "creator"
+        past_date = (timezone.localtime().date() - timedelta(days=1)).isoformat()
+
+        response = self.patch({"event_date": past_date})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.event_date, date(2026, 8, 22))
+
+    def test_update_start_time_to_past_on_today_returns_400(self):
+        self.client.cookies["visitor_id"] = "creator"
+        self.event.event_date = date(2026, 8, 23)
+        self.event.save(update_fields=["event_date"])
+        fixed_now = timezone.make_aware(datetime(2026, 8, 23, 12, 0))
+
+        with patch("events.views_api.timezone.localtime", return_value=fixed_now):
+            response = self.patch({"start_time": "09:00"})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+
+    def test_update_start_time_to_future_on_today_succeeds(self):
+        self.client.cookies["visitor_id"] = "creator"
+        self.event.event_date = date(2026, 8, 23)
+        self.event.save(update_fields=["event_date"])
+        fixed_now = timezone.make_aware(datetime(2026, 8, 23, 12, 0))
+
+        with patch("events.views_api.timezone.localtime", return_value=fixed_now):
+            response = self.patch({"start_time": "18:00"})
+
+        self.assertEqual(response.status_code, 200)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.start_time.isoformat(timespec="minutes"), "18:00")
+
+    def test_update_unrelated_field_on_past_event_succeeds(self):
+        """event_dateが既に過去でも、event_date/start_timeを変更しない更新は拒否されない。"""
+        self.client.cookies["visitor_id"] = "creator"
+        fixed_now = timezone.make_aware(datetime(2026, 8, 23, 12, 0))
+
+        with patch("events.views_api.timezone.localtime", return_value=fixed_now):
+            response = self.patch({"organizer_name": "田中太郎"})
+
+        self.assertEqual(response.status_code, 200)
+
     def test_update_returns_participants(self):
         self.client.cookies["visitor_id"] = "creator"
         participant = Participant.objects.create(event=self.event, name="佐藤")
@@ -507,6 +822,28 @@ class UpdateEventTests(TestCase):
         self.assertIn("error", response.json())
         self.event.refresh_from_db()
         self.assertEqual(self.event.title, "長岡花火大会")
+
+    def test_organizer_name_update_renames_creator_participant(self):
+        """organizer_nameを変更すると、作成者のParticipantの名前も追従する。"""
+        self.client.cookies["visitor_id"] = "creator"
+        participant = Participant.objects.create(
+            event=self.event, name="田中", visitor_id="creator"
+        )
+
+        response = self.patch({"organizer_name": "田中太郎"})
+
+        self.assertEqual(response.status_code, 200)
+        participant.refresh_from_db()
+        self.assertEqual(participant.name, "田中太郎")
+
+    def test_organizer_name_update_without_creator_participant_does_not_error(self):
+        """このPR適用前に作成された(Participant未登録の)イベントを編集してもエラーにならない。"""
+        self.client.cookies["visitor_id"] = "creator"
+
+        response = self.patch({"organizer_name": "田中太郎"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Participant.objects.count(), 0)
 
     def test_update_with_wrong_token_returns_403(self):
         self.client.cookies["visitor_id"] = "someone-else"
@@ -643,6 +980,32 @@ class EventEditPageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "events/event_edit.html")
 
+    def test_edit_page_still_accepts_edit_token_in_query(self):
+        """画面はリンクから開くため、クエリでの受け取りを残している。"""
+        self.client.cookies["visitor_id"] = "someone-else"
+
+        response = self.client.get(
+            f"/e/{self.event.public_id}/edit?edit_token={self.event.edit_token}"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "events/event_edit.html")
+
+    def test_edit_page_sends_edit_token_as_header_on_save(self):
+        self.client.cookies["visitor_id"] = "creator"
+
+        response = self.client.get(f"/e/{self.event.public_id}/edit")
+
+        body = response.content.decode()
+        self.assertIn('src="/static/js/event_edit.js"', body)
+        self.assertNotIn(self.event.edit_token, body)
+
+        # 実際にヘッダーへ編集トークンをセットしているかはevent_edit.js側のロジックで検証する
+        event_edit_js = (
+            Path(settings.BASE_DIR) / "static" / "js" / "event_edit.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn('headers["X-Edit-Token"] = editToken', event_edit_js)
+
     def test_edit_page_without_permission_returns_error_page_with_403(self):
         self.client.cookies["visitor_id"] = "someone-else"
 
@@ -695,3 +1058,711 @@ class CsrfTokenTests(TestCase):
         response = self.client.get(f"/e/{self.event.public_id}/edit")
 
         self.assertIn("csrfmiddlewaretoken", response.content.decode())
+
+
+def make_photo(prefix="data:image/png;base64,", size=8):
+    """テスト用のdata URL形式の写真データを作る。"""
+    return prefix + base64.b64encode(b"a" * size).decode()
+
+
+class CreateEventMissionTests(TestCase):
+    def post(self, event_date):
+        return self.client.post(
+            "/api/events",
+            data=json.dumps(
+                {
+                    "title": "長岡花火大会",
+                    "event_date": event_date,
+                    "location": "新潟県長岡市",
+                    "organizer_name": "田中",
+                }
+            ),
+            content_type="application/json",
+        )
+
+    def test_create_event_generates_three_missions(self):
+        response = self.post(future_date_str(8, 22))
+
+        self.assertEqual(response.status_code, 201)
+        event = Event.objects.get()
+        missions = list(event.missions.all())
+        self.assertEqual([mission.order for mission in missions], [1, 2, 3])
+        self.assertEqual(
+            [mission.prompt_text for mission in missions],
+            [
+                "全員で写真を撮る",
+                "みんなで食べたものを撮る",
+                "夏ならではの1枚を撮る",
+            ],
+        )
+
+    def test_generated_missions_start_uncleared(self):
+        self.post(future_date_str(8, 22))
+
+        event = Event.objects.get()
+        for mission in event.missions.all():
+            self.assertIsNone(mission.photo)
+            self.assertIsNone(mission.completed_at)
+
+    def test_third_mission_uses_season_of_event_date(self):
+        cases = {
+            future_date_str(4, 5): "春ならではの1枚を撮る",
+            future_date_str(8, 22): "夏ならではの1枚を撮る",
+            future_date_str(10, 1): "秋ならではの1枚を撮る",
+            future_date_str(12, 24): "冬ならではの1枚を撮る",
+            future_date_str(1, 10): "冬ならではの1枚を撮る",
+        }
+        for event_date, expected in cases.items():
+            with self.subTest(event_date=event_date):
+                self.post(event_date)
+                event = Event.objects.latest("id")
+                self.assertEqual(event.missions.get(order=3).prompt_text, expected)
+
+
+class GetEventMissionTests(TestCase):
+    def setUp(self):
+        self.event = Event.objects.create(
+            title="長岡花火大会",
+            event_date="2026-08-22",
+            location="新潟県長岡市",
+            organizer_name="田中",
+        )
+
+    def test_get_event_returns_missions_in_order(self):
+        second = Mission.objects.create(
+            event=self.event, order=2, prompt_text="みんなで食べたものを撮る"
+        )
+        first = Mission.objects.create(
+            event=self.event, order=1, prompt_text="全員で写真を撮る"
+        )
+
+        response = self.client.get(f"/api/events/{self.event.public_id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["missions"],
+            [
+                {
+                    "id": first.id,
+                    "order": 1,
+                    "prompt_text": "全員で写真を撮る",
+                    "photo": None,
+                    "completed_at": None,
+                },
+                {
+                    "id": second.id,
+                    "order": 2,
+                    "prompt_text": "みんなで食べたものを撮る",
+                    "photo": None,
+                    "completed_at": None,
+                },
+            ],
+        )
+
+    def test_get_event_returns_empty_missions_for_event_without_missions(self):
+        response = self.client.get(f"/api/events/{self.event.public_id}")
+
+        self.assertEqual(response.json()["missions"], [])
+
+    def test_get_event_returns_photo_and_completed_at(self):
+        photo = make_photo()
+        self.client.cookies["visitor_id"] = "creator"
+        self.event.creator_visitor_id = "creator"
+        self.event.save(update_fields=["creator_visitor_id"])
+        mission = Mission.objects.create(
+            event=self.event, order=1, prompt_text="全員で写真を撮る"
+        )
+        self.client.post(
+            f"/api/events/{self.event.public_id}/missions/{mission.id}/photo",
+            data=json.dumps({"photo": photo}),
+            content_type="application/json",
+        )
+
+        response = self.client.get(f"/api/events/{self.event.public_id}")
+
+        returned = response.json()["missions"][0]
+        self.assertEqual(returned["photo"], photo)
+        self.assertIsNotNone(returned["completed_at"])
+
+
+class UploadMissionPhotoTests(TestCase):
+    def setUp(self):
+        self.event = Event.objects.create(
+            title="長岡花火大会",
+            event_date="2026-08-22",
+            location="新潟県長岡市",
+            organizer_name="田中",
+            creator_visitor_id="creator",
+        )
+        self.mission = Mission.objects.create(
+            event=self.event, order=1, prompt_text="全員で写真を撮る"
+        )
+
+    def post(self, photo, mission_id=None, public_id=None):
+        mission_id = self.mission.id if mission_id is None else mission_id
+        public_id = self.event.public_id if public_id is None else public_id
+        return self.client.post(
+            f"/api/events/{public_id}/missions/{mission_id}/photo",
+            data=json.dumps({"photo": photo}),
+            content_type="application/json",
+        )
+
+    def join(self, visitor_id, name="山田"):
+        self.client.cookies["visitor_id"] = visitor_id
+        return self.client.post(
+            f"/api/events/{self.event.public_id}/participants",
+            data=json.dumps({"name": name}),
+            content_type="application/json",
+        )
+
+    def test_participant_can_upload_photo(self):
+        self.join("participant")
+        photo = make_photo()
+
+        response = self.post(photo)
+
+        self.assertEqual(response.status_code, 200)
+        self.mission.refresh_from_db()
+        self.assertEqual(self.mission.photo, photo)
+        self.assertIsNotNone(self.mission.completed_at)
+        self.assertEqual(
+            response.json(),
+            {
+                "id": self.mission.id,
+                "order": 1,
+                "prompt_text": "全員で写真を撮る",
+                "photo": photo,
+                "completed_at": response.json()["completed_at"],
+            },
+        )
+
+    def test_creator_who_is_not_participant_can_upload_photo(self):
+        self.client.cookies["visitor_id"] = "creator"
+        self.assertFalse(self.event.participants.exists())
+
+        response = self.post(make_photo())
+
+        self.assertEqual(response.status_code, 200)
+        self.mission.refresh_from_db()
+        self.assertIsNotNone(self.mission.photo)
+
+    def test_photo_is_overwritten(self):
+        self.join("participant")
+        self.post(make_photo(size=8))
+        second_photo = make_photo(prefix="data:image/jpeg;base64,", size=16)
+
+        response = self.post(second_photo)
+
+        self.assertEqual(response.status_code, 200)
+        self.mission.refresh_from_db()
+        self.assertEqual(self.mission.photo, second_photo)
+
+    def test_stranger_cannot_upload_photo(self):
+        self.client.cookies["visitor_id"] = "stranger"
+
+        response = self.post(make_photo())
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("error", response.json())
+        self.mission.refresh_from_db()
+        self.assertIsNone(self.mission.photo)
+
+    def test_visitor_without_cookie_cannot_upload_photo(self):
+        response = self.post(make_photo())
+
+        self.assertEqual(response.status_code, 403)
+        self.mission.refresh_from_db()
+        self.assertIsNone(self.mission.photo)
+
+    def test_blank_visitor_id_does_not_match_participant_without_visitor_id(self):
+        """participants.visitor_idはnull許容のため、空のvisitor_idは無条件で拒否する。"""
+        from .views_api import can_upload_mission_photo
+
+        Participant.objects.create(event=self.event, name="佐藤", visitor_id=None)
+
+        class StubRequest:
+            visitor_id = ""
+
+        self.assertFalse(can_upload_mission_photo(StubRequest(), self.event))
+
+    def test_upload_to_unknown_event_returns_404(self):
+        self.client.cookies["visitor_id"] = "creator"
+
+        response = self.post(make_photo(), public_id="zzzzzz")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {"error": "イベントが見つかりません"})
+
+    def test_upload_to_unknown_mission_returns_404(self):
+        self.client.cookies["visitor_id"] = "creator"
+
+        response = self.post(make_photo(), mission_id=self.mission.id + 999)
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {"error": "ミッションが見つかりません"})
+
+    def test_upload_to_mission_of_another_event_returns_404(self):
+        other_event = Event.objects.create(
+            title="ぶどう狩り",
+            event_date="2026-10-01",
+            location="新潟県南魚沼市",
+            organizer_name="鈴木",
+        )
+        other_mission = Mission.objects.create(
+            event=other_event, order=1, prompt_text="全員で写真を撮る"
+        )
+        self.client.cookies["visitor_id"] = "creator"
+
+        response = self.post(make_photo(), mission_id=other_mission.id)
+
+        self.assertEqual(response.status_code, 404)
+        other_mission.refresh_from_db()
+        self.assertIsNone(other_mission.photo)
+
+    def test_non_numeric_mission_id_returns_json_404(self):
+        self.client.cookies["visitor_id"] = "creator"
+
+        response = self.client.post(
+            f"/api/events/{self.event.public_id}/missions/abc/photo",
+            data=json.dumps({"photo": make_photo()}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {"error": "ミッションが見つかりません"})
+
+    def test_accepts_base64_variations(self):
+        """改行・パディング省略・大文字の接頭辞はいずれも復号できるため受け付ける。"""
+        self.client.cookies["visitor_id"] = "creator"
+        cases = {
+            "改行入り": "data:image/png;base64,"
+            + base64.encodebytes(b"a" * 100).decode(),
+            "パディング省略": "data:image/png;base64,YWE",
+            "大文字の接頭辞": "DATA:IMAGE/PNG;BASE64,YWFh",
+        }
+        for label, photo in cases.items():
+            with self.subTest(label=label):
+                response = self.post(photo)
+
+                self.assertEqual(response.status_code, 200)
+                self.mission.refresh_from_db()
+                self.assertEqual(self.mission.photo, photo)
+
+    def test_non_image_data_url_returns_400(self):
+        self.client.cookies["visitor_id"] = "creator"
+
+        response = self.post(make_photo(prefix="data:text/html;base64,"))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+        self.mission.refresh_from_db()
+        self.assertIsNone(self.mission.photo)
+
+    def test_broken_base64_returns_400(self):
+        self.client.cookies["visitor_id"] = "creator"
+
+        response = self.post("data:image/png;base64,これはBase64ではない")
+
+        self.assertEqual(response.status_code, 400)
+        self.mission.refresh_from_db()
+        self.assertIsNone(self.mission.photo)
+
+    def test_empty_photo_returns_400(self):
+        self.client.cookies["visitor_id"] = "creator"
+
+        response = self.post("")
+
+        self.assertEqual(response.status_code, 400)
+        self.mission.refresh_from_db()
+        self.assertIsNone(self.mission.photo)
+
+    def test_accepts_jpeg_and_webp(self):
+        self.client.cookies["visitor_id"] = "creator"
+        for prefix in ("data:image/jpeg;base64,", "data:image/webp;base64,"):
+            with self.subTest(prefix=prefix):
+                response = self.post(make_photo(prefix=prefix))
+
+                self.assertEqual(response.status_code, 200)
+
+    def test_photo_over_size_limit_returns_400(self):
+        self.client.cookies["visitor_id"] = "creator"
+        prefix = "data:image/png;base64,"
+        photo = prefix + "A" * (5 * 1024 * 1024)
+
+        response = self.post(photo)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {"error": "写真のサイズが大きすぎます"})
+        self.mission.refresh_from_db()
+        self.assertIsNone(self.mission.photo)
+
+    def test_three_megabyte_photo_is_accepted(self):
+        """DATA_UPLOAD_MAX_MEMORY_SIZEを上げていないとDjangoが400を返す。"""
+        self.client.cookies["visitor_id"] = "creator"
+        photo = make_photo(size=2 * 1024 * 1024)
+        self.assertGreater(len(photo), 2.5 * 1024 * 1024)
+
+        response = self.post(photo)
+
+        self.assertEqual(response.status_code, 200)
+        self.mission.refresh_from_db()
+        self.assertEqual(self.mission.photo, photo)
+
+    def test_get_returns_405(self):
+        self.client.cookies["visitor_id"] = "creator"
+
+        response = self.client.get(
+            f"/api/events/{self.event.public_id}/missions/{self.mission.id}/photo"
+        )
+
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(response.headers["Allow"], "POST")
+
+
+class CreateEventImageTests(TestCase):
+    """#44: create_eventでのEvent.image（任意項目）の検証。保存方式・上限はMission.photoと同じ。"""
+
+    def setUp(self):
+        self.future_date = timezone.localtime().date() + timedelta(days=1)
+        self.payload = {
+            "title": "画像テストイベント",
+            "event_date": self.future_date.isoformat(),
+            "location": "会場",
+            "organizer_name": "田中",
+        }
+
+    def post(self, payload):
+        return self.client.post(
+            "/api/events",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+    def get_image(self, public_id):
+        response = self.client.get(f"/api/events/{public_id}")
+        return response.json()["image"]
+
+    def test_create_event_with_image_is_saved_and_returned(self):
+        photo = make_photo()
+        self.payload["image"] = photo
+
+        response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 201)
+        public_id = response.json()["public_id"]
+        self.assertEqual(self.get_image(public_id), photo)
+
+    def test_create_event_without_image_defaults_to_none(self):
+        response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 201)
+        public_id = response.json()["public_id"]
+        self.assertIsNone(self.get_image(public_id))
+
+    def test_create_event_with_null_image_is_allowed(self):
+        self.payload["image"] = None
+
+        response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 201)
+        public_id = response.json()["public_id"]
+        self.assertIsNone(self.get_image(public_id))
+
+    def test_create_event_with_non_string_image_returns_400(self):
+        for image in (12345, True, ["x"], {"a": 1}):
+            with self.subTest(image=image):
+                payload = {**self.payload, "image": image}
+
+                response = self.post(payload)
+
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json(), {"error": "画像の形式が不正です"})
+                self.assertFalse(Event.objects.exists())
+
+    def test_create_event_with_non_image_data_url_returns_400(self):
+        self.payload["image"] = make_photo(prefix="data:text/html;base64,")
+
+        response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {"error": "画像の形式が不正です"})
+        self.assertFalse(Event.objects.exists())
+
+    def test_create_event_with_unsupported_image_format_returns_400(self):
+        for prefix in ("data:image/svg+xml;base64,", "data:image/gif;base64,"):
+            with self.subTest(prefix=prefix):
+                payload = {**self.payload, "image": make_photo(prefix=prefix)}
+
+                response = self.post(payload)
+
+                self.assertEqual(response.status_code, 400)
+                self.assertFalse(Event.objects.exists())
+
+    def test_create_event_with_empty_image_returns_400(self):
+        self.payload["image"] = ""
+
+        response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Event.objects.exists())
+
+    def test_create_event_with_oversized_image_returns_400(self):
+        prefix = "data:image/png;base64,"
+        self.payload["image"] = prefix + "A" * (5 * 1024 * 1024)
+
+        response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {"error": "画像のサイズが大きすぎます"})
+        self.assertFalse(Event.objects.exists())
+
+    def test_create_event_with_three_megabyte_image_is_accepted(self):
+        """DATA_UPLOAD_MAX_MEMORY_SIZEを上げていないとDjangoが400を返す。"""
+        photo = make_photo(size=2 * 1024 * 1024)
+        self.assertGreater(len(photo), 2.5 * 1024 * 1024)
+        self.payload["image"] = photo
+
+        response = self.post(self.payload)
+
+        self.assertEqual(response.status_code, 201)
+        public_id = response.json()["public_id"]
+        self.assertEqual(self.get_image(public_id), photo)
+
+
+class UpdateEventImageTests(TestCase):
+    """#44: update_eventでのEvent.image更新・nullによるクリアの検証。"""
+
+    def setUp(self):
+        self.event = Event.objects.create(
+            title="画像更新テスト",
+            event_date="2026-08-22",
+            location="会場",
+            organizer_name="田中",
+            creator_visitor_id="creator",
+        )
+        self.client.cookies["visitor_id"] = "creator"
+
+    def patch(self, payload):
+        return self.client.patch(
+            f"/api/events/{self.event.public_id}",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+    def test_update_event_can_set_image(self):
+        photo = make_photo()
+
+        response = self.patch({"image": photo})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["image"], photo)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.image, photo)
+
+    def test_update_event_with_null_clears_image(self):
+        self.event.image = make_photo()
+        self.event.save(update_fields=["image"])
+
+        response = self.patch({"image": None})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["image"])
+        self.event.refresh_from_db()
+        self.assertIsNone(self.event.image)
+
+    def test_update_with_invalid_image_returns_400_and_keeps_existing(self):
+        photo = make_photo()
+        self.event.image = photo
+        self.event.save(update_fields=["image"])
+
+        response = self.patch({"image": make_photo(prefix="data:text/html;base64,")})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {"error": "画像の形式が不正です"})
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.image, photo)
+
+    def test_update_with_non_string_image_returns_400(self):
+        for image in (12345, True, ["x"], {"a": 1}):
+            with self.subTest(image=image):
+                response = self.patch({"image": image})
+
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json(), {"error": "画像の形式が不正です"})
+
+    def test_update_unrelated_field_keeps_existing_image(self):
+        photo = make_photo()
+        self.event.image = photo
+        self.event.save(update_fields=["image"])
+
+        response = self.patch({"organizer_name": "次郎"})
+
+        self.assertEqual(response.status_code, 200)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.image, photo)
+        self.assertEqual(self.event.organizer_name, "次郎")
+
+    def test_update_with_oversized_image_returns_400(self):
+        prefix = "data:image/png;base64,"
+        oversized = prefix + "A" * (5 * 1024 * 1024)
+
+        response = self.patch({"image": oversized})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {"error": "画像のサイズが大きすぎます"})
+
+
+class MyEventsApiTests(TestCase):
+    """my_eventsカード一覧(#44)でも画像を表示できるよう、/api/my-eventsのimageフィールドを検証する。"""
+
+    def test_returns_image_field_for_created_and_participated_events(self):
+        created_event = Event.objects.create(
+            title="作成イベント",
+            event_date="2026-08-22",
+            location="会場",
+            organizer_name="田中",
+            creator_visitor_id="visitor-a",
+            image=make_photo(),
+        )
+        participated_event = Event.objects.create(
+            title="参加イベント",
+            event_date="2026-08-23",
+            location="会場",
+            organizer_name="鈴木",
+            creator_visitor_id="visitor-b",
+        )
+        Participant.objects.create(
+            event=participated_event, name="太郎", visitor_id="visitor-a"
+        )
+
+        self.client.cookies["visitor_id"] = "visitor-a"
+        response = self.client.get("/api/my-events")
+
+        self.assertEqual(response.status_code, 200)
+        events_by_public_id = {
+            event["public_id"]: event for event in response.json()["events"]
+        }
+        self.assertEqual(
+            events_by_public_id[created_event.public_id]["image"],
+            created_event.image,
+        )
+        self.assertIsNone(
+            events_by_public_id[participated_event.public_id]["image"]
+        )
+
+
+class PublicIdCollisionTests(TestCase):
+    def setUp(self):
+        self.existing = Event.objects.create(
+            title="長岡花火大会",
+            event_date="2026-08-22",
+            location="新潟県長岡市",
+            organizer_name="田中",
+        )
+
+    def create(self, **extra):
+        return Event.objects.create(
+            title="ぶどう狩り",
+            event_date="2026-10-01",
+            location="新潟県南魚沼市",
+            organizer_name="鈴木",
+            **extra,
+        )
+
+    def test_colliding_public_id_is_regenerated(self):
+        with patch(
+            "events.models.generate_public_id", side_effect=["ab34cd"]
+        ) as generate:
+            event = self.create(public_id=self.existing.public_id)
+
+        self.assertEqual(event.public_id, "ab34cd")
+        self.assertEqual(generate.call_count, 1)
+        self.assertEqual(Event.objects.count(), 2)
+
+    def test_retries_until_a_free_public_id_is_found(self):
+        with patch(
+            "events.models.generate_public_id",
+            side_effect=[self.existing.public_id, self.existing.public_id, "ab34cd"],
+        ) as generate:
+            event = self.create(public_id=self.existing.public_id)
+
+        self.assertEqual(event.public_id, "ab34cd")
+        self.assertEqual(generate.call_count, 3)
+
+    def test_gives_up_after_max_attempts(self):
+        with patch(
+            "events.models.generate_public_id", return_value=self.existing.public_id
+        ) as generate:
+            with self.assertRaises(PublicIdCollisionError):
+                self.create(public_id=self.existing.public_id)
+
+        # 最初の1回は生成済みのIDを使うため、生成し直すのは上限-1回
+        self.assertEqual(generate.call_count, PUBLIC_ID_MAX_ATTEMPTS - 1)
+        self.assertEqual(Event.objects.count(), 1)
+
+    def test_other_integrity_errors_are_not_retried(self):
+        error = IntegrityError("UNIQUE constraint failed: events_event.edit_token")
+        with patch("django.db.models.Model.save", side_effect=error):
+            with patch("events.models.generate_public_id") as generate:
+                with self.assertRaises(IntegrityError):
+                    self.create()
+
+        generate.assert_not_called()
+
+    def test_updating_an_event_keeps_its_public_id(self):
+        public_id = self.existing.public_id
+
+        with patch("events.models.generate_public_id") as generate:
+            self.existing.title = "長岡花火大会2026"
+            self.existing.save()
+
+        self.existing.refresh_from_db()
+        self.assertEqual(self.existing.public_id, public_id)
+        generate.assert_not_called()
+
+    def test_create_event_api_returns_error_when_public_id_cannot_be_issued(self):
+        payload = {
+            "title": "ぶどう狩り",
+            "event_date": "2026-10-01",
+            "location": "新潟県南魚沼市",
+            "organizer_name": "鈴木",
+        }
+        # フィールドの既定値は生成関数を直接参照しているため、既定値側を差し替える
+        field = Event._meta.get_field("public_id")
+
+        with patch.object(field, "_get_default", lambda: self.existing.public_id):
+            with patch(
+                "events.models.generate_public_id",
+                return_value=self.existing.public_id,
+            ):
+                response = self.client.post(
+                    "/api/events",
+                    data=json.dumps(payload),
+                    content_type="application/json",
+                )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertIn("error", response.json())
+        self.assertEqual(Event.objects.count(), 1)
+
+    def test_create_event_api_succeeds_when_a_retry_frees_the_public_id(self):
+        payload = {
+            "title": "ぶどう狩り",
+            "event_date": "2026-10-01",
+            "location": "新潟県南魚沼市",
+            "organizer_name": "鈴木",
+        }
+        # フィールドの既定値は生成関数を直接参照しているため、既定値側を差し替える
+        field = Event._meta.get_field("public_id")
+
+        with patch.object(field, "_get_default", lambda: self.existing.public_id):
+            with patch("events.models.generate_public_id", side_effect=["ab34cd"]):
+                response = self.client.post(
+                    "/api/events",
+                    data=json.dumps(payload),
+                    content_type="application/json",
+                )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["public_id"], "ab34cd")
+        self.assertEqual(Event.objects.count(), 2)

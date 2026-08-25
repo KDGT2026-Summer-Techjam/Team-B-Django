@@ -48,6 +48,24 @@ header {
     width: 30px;
     height: 100vh;
     z-index: 90;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    align-items: flex-start; 
+    padding-left: 12px; /* ★ここが左側の余白になります！好きな数値に調整してください */
+    box-sizing: border-box; /* paddingを含めた幅として計算させるおまじない */
+    gap: 30px;
+
+}
+
+/* トリガー内のアイコン設定 */
+.sidebar-trigger svg {
+    width: 24px;
+    height: 24px;
+    fill: #8AB69B; /* サイドバーの背景と同じ色 */
+    opacity: 0.9;
+    transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 .sidebar {
@@ -87,6 +105,7 @@ header {
 .menu li:hover {
     opacity: 0.7;
 }
+
 
 /* ================================
    aタグ（リンク）用の追加スタイル
@@ -166,12 +185,18 @@ header {
     gap: 12px;
 }
 
+.image-upload {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 30px;
+}
+
 .image-section {
     width: 320px;
     height: 320px;
     background-color: #EEEEEE;
     display: flex;
-    margin-top: 30px;
     justify-content: center;
     align-items: center;
     border-radius: 10px;
@@ -182,6 +207,28 @@ header {
     width: 80px;
     height: 80px;
     fill: #888888;
+}
+
+.image-section img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.btn-remove-image {
+    align-self: flex-start;
+    border: none;
+    background: none;
+    padding: 0;
+    color: #666;
+    font-size: 12px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.btn-remove-image:hover {
+    color: #333;
 }
 
 /* ================================

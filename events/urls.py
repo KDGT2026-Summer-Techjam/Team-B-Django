@@ -21,8 +21,18 @@ urlpatterns = [
         name="api_join_event",
     ),
     path(
+        "api/events/<str:public_id>/missions/<str:mission_id>/photo",
+        views_api.upload_mission_photo,
+        name="api_upload_mission_photo",
+    ),
+    path(
     "api/my-events",
     views_api.my_events,
     name="api_my_events",
+    ),
+    path(
+    "api/events/<str:public_id>/participants/<int:id>",
+    views_api.delete_participant,
+    name="api_delete_participant",
     ),
 ]

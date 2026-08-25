@@ -1,75 +1,491 @@
 @charset "UTF-8";
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
-/* ================================
-   event_page ページ用の追加スタイル
-   （共通スタイルは common.css を参照）
-================================ */
-
-/* このページだけ Inter フォントを使う */
 * {
-  font-family: 'Inter', 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+  font-family: 'Inter', sans-serif;
+  box-sizing: border-box;
 }
 
 body {
+  background-color: #F6F5EF; 
+  margin: 0;
   color: #333;
 }
 
 main {
   height: 100vh;
-  overflow: hidden;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
 
-/* このページだけボタンの色が異なる */
-.btn-complete {
-  background-color: #F07A5D;
+.main-content {
+  padding: 30px 10px;
+  display: flex;
+  justify-content: center;
 }
 
-/* 参加前だけ表示する名前入力エリア */
-.join-area {
-  margin-top: 12px;
+.event-page-container {
+  width: 100%;
+  max-width: 420px; 
+  background: #fff;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
-.join-label {
-  display: block;
-  font-size: 12px;
-  margin-bottom: 4px;
+/* ================= 上部：イベント詳細 ================= */
+.event-header-card {
+  background-color: #B4CC33; 
+  padding: 20px 15px; 
 }
 
-/* common.cssのinputは枠なしだが、ここは初めて来た人に入力欄だと分かる必要があるため枠を付ける */
-.join-area input {
-  font-size: 16px;
-  width: 80%;
-  padding: 8px 10px;
-  border: 1px solid #D8D3C8;
-  border-radius: 6px;
-  background-color: #fff;
-  transition: border-color 0.15s, box-shadow 0.15s;
+.btn-edit {
+  top: 15px;
+  right: 15px;
+  background-color: #8DA0CC;
+  color: #fff;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  z-index: 10;
+  margin-bottom: 8px;
+  display: inline-block;
+  text-decoration: none;
 }
 
-.join-area input:hover {
-  border-color: #BFB8A9;
-  background-color: #fff;
+.header-inner {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0px; /* 編集ボタンとの被りを防ぐ */
+  gap: 12px; /* 左右のブロックの間隔 */
 }
 
-/* フォーカス中はページのアクセントカラーで縁取る */
-.join-area input:focus {
-  border-color: #F07A5D;
-  box-shadow: 0 0 0 3px rgba(240, 122, 93, 0.18);
-  background-color: #fff;
+/* 左側：テキストエリア（flexを使って隙間を一括管理） */
+.text-section {
+  width: 50%;
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* 各項目の隙間を最小限に詰める */
+  padding: 10px;
 }
 
-/* 参加後だけ表示する完了の合図 */
-.joined-message {
-  margin-top: 12px;
+#event-title {
+  font-size: 22px; /* 少し縮小して収まりを良くする */
   font-weight: 700;
-  color: #F07A5D;
+  margin: 0;
+  color: #2F4F2F;
+  line-height: 1.2;
+  margin-top: -2px;
 }
 
-.error-msg {
-  margin: 4px 0 0;
-  font-size: 12px;
-  color: red;
+.date-row {
+  display: flex;
+  gap: 10px;
+  font-size: 10px;
+  margin-bottom: 0px; 
+  align-items: baseline; /* ★追加：文字の下のライン（ベースライン）をピッタリ揃える */
 }
+
+/* ★追加：中の p タグが持っている余計な隙間をリセットする */
+.date-row p {
+  margin: 0;
+}
+
+.info-group {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.2;
+}
+.info-label {
+  display: block;
+  font-size: 9px;
+  margin-bottom: 1px;
+  opacity: 0.8;
+}
+
+.members-area { 
+  margin-top: 0px; 
+}
+/* 箱の高さや配置の調整（先ほどの設定） */
+.member-header {
+  margin: 0 !important; 
+  padding: 0 !important; 
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  line-height: 1 !important; 
+  height: 10px; 
+  margin-bottom: 2px !important; 
+}
+
+/* ★追加：「メンバー」という文字（spanタグ）を直接狙い撃ち！ */
+.member-header span {
+  font-size: 10px !important; /* ここを好きなサイズ（7px や 6px）に変更してください */
+  line-height: 1 !important;
+}
+
+/* ★追加：「n人」の部分も確実に上書きする */
+.member-count-small { 
+  font-size: 10px !important; /* ここも好きなサイズに変更してください */
+  line-height: 1 !important;
+}
+.input-members {
+  list-style: none;
+  padding: 0; margin: 0;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+
+/* 右側：画像＆参加エリア */
+.action-section {
+  width: 48%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.map-placeholder {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+}
+
+.map-placeholder img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.join-action-wrapper { 
+  width: 100%; 
+  margin-top: 8px; /* 画像とフォームの隙間 */
+}
+
+.join-area { 
+  display: flex; 
+  gap: 6px; 
+  width: 100%; 
+  align-items: center; 
+}
+
+.join-area input {
+  flex: 1;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 11px;
+  min-width: 0;
+  height: 26px; /* ボタンと高さを揃える */
+  box-sizing: border-box;
+}
+
+.join-area input:focus {
+  border-color: #8DA0CC;
+  outline: none;
+}
+
+/* 共通CSSの影響を強制的に打ち消して、横並びに配置する */
+.join-area .btn-complete {
+  position: static !important;
+  transform: none !important;
+  margin: 0 !important;
+  background-color: #8DA0CC;
+  color: #fff;
+  border: none;
+  padding: 0 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  height: 26px; /* Inputと高さを揃える */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* display:flexの詳細度がhidden属性より高く、hidden指定時も表示され続けてしまうため明示的に上書きする */
+.join-area .btn-complete[hidden] {
+  display: none;
+}
+
+/* 参加取り消しボタン：離脱操作のため「参加する」ボタンより控えめな見た目にする */
+.btn-cancel-join {
+  position: static !important;
+  transform: none !important;
+  margin: 0 !important;
+  width: 100%;
+  background-color: #fff;
+  color: #757575;
+  border: 1px solid #ccc;
+  padding: 0 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  height: 26px; /* 参加する/名前入力欄と高さを揃える */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-cancel-join:hover {
+  background-color: #F5F5F5;
+  border-color: #999;
+}
+
+/* display:flexの詳細度がhidden属性より高く、hidden指定時も表示され続けてしまうため明示的に上書きする */
+.btn-cancel-join[hidden] {
+  display: none;
+}
+/* ================= 下部：スタンプラリー ================= */
+.stamp-rally-card {
+  background-color: #F8F9FA;
+  background-image: 
+    linear-gradient(#E2E8F0 1px, transparent 1px),
+    linear-gradient(90deg, #E2E8F0 1px, transparent 1px);
+  background-size: 25px 25px;
+}
+
+.sr-header {
+  background: rgba(255,255,255,0.7);
+  padding: 10px 20px;
+  border-bottom: 1px solid #E2E8F0;
+}
+.sr-header h2 {
+  font-size: 18px;
+  color: #BDBDBD;
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.missions-container {
+  background: rgba(255,255,255,0.7);
+  padding: 10px 20px;
+  border-bottom: 1px solid #E2E8F0;
+}
+.mission-row {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  margin-bottom: 5px;
+}
+.m-icon { margin-right: 8px; font-size: 14px; }
+.mission-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  margin-left: 5px;
+  outline: none;
+}
+
+/* マップエリア */
+.rally-map-container {
+  position: relative;
+  height: 520px;
+  width: 100%;
+}
+.map-path-bg, .map-path-active {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%; z-index: 1;
+}
+#active-path {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  transition: stroke-dashoffset 1.5s ease-in-out;
+}
+
+/* ノード共通設定 */
+.map-node {
+  position: absolute;
+  z-index: 3;
+  width: 70px; height: 70px;
+  border-radius: 50%;
+  display: flex; justify-content: center; align-items: center;
+  font-size: 22px; font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.node-icon {
+  position: absolute;
+  top: -8px; left: -8px;
+  background: #fff;
+  border-radius: 50%;
+  width: 24px; height: 24px;
+  display: flex; justify-content: center; align-items: center;
+  font-size: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 写真枠共通設定 */
+.photo-box {
+  position: absolute;
+  z-index: 2;
+  width: 120px; height: 80px;
+  border-radius: 12px;
+  display: flex; justify-content: center; align-items: center;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+.file-input { display: none; }
+.photo-label {
+  color: #fff; font-size: 12px; font-weight: bold;
+  text-align: center; cursor: pointer; width: 100%; height: 100%;
+  display: flex; justify-content: center; align-items: center;
+}
+.preview-img {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%; object-fit: cover; display: none;
+}
+.hidden { display: none !important; }
+
+/* 座標配置 (SVGの線とミリ単位で完璧に重なるよう調整) */
+/* SVGパス: M 90 90 (始点) -> Q ... 270 240 (折り返し点) -> Q ... 100 400 (終点) */
+
+/* Node 1 (中心 90, 90) */
+.node-1 { top: 55px; left: 55px; }
+.pb-1   { top: 50px; left: 220px; transform: rotate(-3deg); }
+
+/* Node 2 (中心 270, 240) */
+.node-2 { top: 233px; left: 290px; }
+.pb-2   { top: 240px; left: 50px; transform: rotate(-5deg); }
+
+/* Node 3 (中心 100, 400) */
+.node-3 { top: 400px; left: 65px; }
+.pb-3   { top: 360px; left: 210px; transform: rotate(2deg); }
+
+
+/* ==========================================
+   ミッションごとのテーマカラー完全再現
+========================================== */
+
+/* --- ミッション1 (深緑) --- */
+.mission-row[data-mission="1"] { color: #4A764D; }
+.mission-row[data-mission="1"] .mission-input::placeholder { color: #9AB29C; }
+.node-1 .node-icon { color: #4A764D; }
+
+.node-1.locked { background: transparent; color: #4A764D; border: 2px dashed #4A764D; }
+.node-1.active { background: #4A764D; color: #fff; border: 4px solid #fff; box-shadow: 0 0 0 2px #4A764D; }
+.node-1.done { background: #759B77; color: #2D5430; border: none; }
+.pb-1.active { background: #759B77; border: 2px dashed #4A764D; }
+.pb-1.done { background: #2D5430; border: none; }
+
+/* --- ミッション2 (黄緑) --- */
+.mission-row[data-mission="2"] { color: #8BC239; }
+.mission-row[data-mission="2"] .mission-input::placeholder { color: #C2DFA1; }
+.node-2 .node-icon { color: #8BC239; }
+
+.node-2.locked { background: transparent; color: #8BC239; border: 2px dashed #8BC239; }
+.node-2.active { background: #8BC239; color: #fff; border: 4px solid #fff; box-shadow: 0 0 0 2px #8BC239; }
+.node-2.done { background: #A8D468; color: #fff; border: none; }
+.pb-2.active { background: #B2D874; border: 2px dashed #8BC239; }
+.pb-2.done { background: #67A020; border: none; }
+
+/* --- ミッション3 (青藤色) --- */
+.mission-row[data-mission="3"] { color: #8B9CBF; }
+.mission-row[data-mission="3"] .mission-input::placeholder { color: #C4CDDF; }
+.node-3 .node-icon { color: #8B9CBF; }
+
+.node-3.locked { background: transparent; color: #8B9CBF; border: 2px dashed #8B9CBF; }
+.node-3.active { background: #8B9CBF; color: #fff; border: 4px solid #fff; box-shadow: 0 0 0 2px #8B9CBF; }
+.node-3.done { background: #B2BED1; color: #fff; border: none; }
+.pb-3.active { background: #B2BED1; border: 2px dashed #8B9CBF; }
+.pb-3.done { background: #6F7F9E; border: none; }
+
+
+/* フッターアイコン */
+.card-footer-icons {
+  display: flex; justify-content: flex-end;
+  padding: 10px 15px; gap: 15px;
+}
+.icon-btn { background: none; border: none; cursor: pointer; padding: 0;}
+.card-footer-icons svg { width: 22px; height: 22px; fill: #555; }
+
+/* 落書きモード中はダウンロード/共有ボタンが押せないため、薄くして操作不可であることを示す */
+.card-footer-icons.doodle-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+/* ================= 落書き（Doodle）機能 ================= */
+
+/* 大前提：親要素を基準にキャンバスを広げるためのおまじない */
+#capture-area {
+  position: relative;
+}
+
+/* キャンバス本体 */
+.doodle-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 50; /* テキストや地図の上に被せる */
+  pointer-events: none; /* 初期状態はタップを貫通させる */
+  touch-action: none; /* スマホブラウザのスクロール動作をブロック */
+}
+.doodle-layer.active {
+  pointer-events: auto; /* 落書きモードONで描画可能に */
+  cursor: crosshair;
+}
+
+/* ツールバーとUI */
+.doodle-toolbar {
+  position: fixed;
+  bottom: 80px; /* 右下のボタン類と被らない高さ */
+  right: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  z-index: 100;
+}
+
+.doodle-btn {
+  background: #333; 
+  color: #fff; 
+  border: none; 
+  padding: 8px 12px; 
+  border-radius: 20px;
+  font-size: 11px; 
+  cursor: pointer; 
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.doodle-btn.active { background: #E57373; }
+.clear-btn { background: #999; width: 100%; margin-top: 5px; }
+
+.doodle-controls {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #ddd;
+}
+.doodle-controls.hidden { display: none; }
+
+.color-palette { display: flex; gap: 8px; }
+.color-swatch {
+  width: 20px; height: 20px; 
+  border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent;
+}
+.color-swatch.active { border-color: #333; transform: scale(1.1); }
+.weight-control { display: flex; align-items: center; gap: 5px; }
