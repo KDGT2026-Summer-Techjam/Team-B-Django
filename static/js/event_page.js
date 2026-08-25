@@ -359,6 +359,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     missions.forEach(mission => {
       missionIdByOrder[mission.order] = mission.id;
+
+      const inputEl = document.querySelector(`.mission-row[data-mission="${mission.order}"] .mission-input`);
+      if (inputEl) inputEl.value = mission.prompt_text;
+
       if (mission.completed_at) {
         setNodeDone(mission.order, mission.photo);
       } else if (firstIncompleteOrder === null) {
