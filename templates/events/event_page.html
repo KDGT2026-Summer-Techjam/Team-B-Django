@@ -7,7 +7,7 @@
   <title>誘いのページ - Inby</title>
   <link rel="stylesheet" href="{% static 'css/common.css' %}">
   <!-- キャッシュ回避のためのパラメータを付与 -->
-  <link rel="stylesheet" href="{% static 'css/event_page.css' %}?v=6">
+  <link rel="stylesheet" href="{% static 'css/event_page.css' %}?v=9">
 
   <!-- 画像ダウンロード用のライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -34,28 +34,29 @@
         
         <!-- ================= 上部：イベント詳細 ================= -->
         <div class="event-header-card">
+          <!-- タイトルは2カラムの外に出し、カード全体の幅を使って表示する -->
+          <h1 id="event-title">タイトル</h1>
           <div class="header-inner">
             <!-- 左側：テキストエリア -->
             <div class="text-section">
-              <h1 id="event-title">タイトル</h1>
               <div class="date-row">
-                <p id="event-date">YYYY/MM/DD</p>
-                <p id="event-days-left">あと3日</p>
+                <p id="event-date">日時</p>
+                <p id="event-days-left">残り日数</p>
               </div>
-              <p id="event-time" hidden>hh:mm</p>
+              <p id="event-time" hidden>時刻</p>
               
               <div class="info-group">
                 <span class="info-label">場所</span>
                 <p id="event-location">場所</p>
               </div>
               <div class="info-group">
-                <span class="info-label">投稿者</span>
-                <p id="event-author">投稿者</p>
+                <span class="info-label">主催者</span>
+                <p id="event-author">主催者</p>
               </div>
 
               <div class="members-area">
                 <div class="member-header">
-                  <span>メンバー</span>
+                  <span>参加メンバー</span>
                   <span id="event-member-count" class="member-count-small">0人</span>
                 </div>
                 <ul class="input-members" id="event-member-list">
@@ -75,7 +76,7 @@
               
               <div class="join-action-wrapper">
                 <div class="join-area" id="event-join-area">
-                  <input type="text" id="event-name-input" placeholder="名前 |" maxlength="255">
+                  <input type="text" id="event-name-input" placeholder="名前" maxlength="255">
                   <button class="btn-complete" id="event-join-btn">参加する</button>
                 </div>
 

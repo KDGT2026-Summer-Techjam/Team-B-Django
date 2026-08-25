@@ -64,29 +64,31 @@ main {
 }
 
 /* 左側：テキストエリア（flexを使って隙間を一括管理） */
+/* 背景色 #B4CC33 の補色（藍紫 #28224F）をベースに、透明度で階層をつけて視認性を確保する */
 .text-section {
   width: 50%;
-  color: #333;
+  color: rgba(40, 34, 79, 0.78);
   display: flex;
   flex-direction: column;
   gap: 4px; /* 各項目の隙間を最小限に詰める */
   padding: 10px;
 }
 
+/* タイトルはヘッダーカードの全幅を使い、右上の編集ボタンとだけ被らないよう余白を取る */
 #event-title {
-  font-size: 22px; /* 少し縮小して収まりを良くする */
+  font-size: 26px;
   font-weight: 700;
-  margin: 0;
-  color: #2F4F2F;
+  margin: 0 0 8px;
+  padding-right: 70px;
+  color: #28224F;
   line-height: 1.2;
-  margin-top: -2px;
 }
 
 .date-row {
   display: flex;
   gap: 10px;
-  font-size: 10px;
-  margin-bottom: 0px; 
+  font-size: 13px;
+  margin-bottom: 0px;
   align-items: baseline; /* ★追加：文字の下のライン（ベースライン）をピッタリ揃える */
 }
 
@@ -95,14 +97,23 @@ main {
   margin: 0;
 }
 
+/* 「あと◯日」：アプリの独自機能なので、同系色を全不透明＋薄い白チップで目立たせる */
+#event-days-left {
+  color: #28224F;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.55);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
 .info-group {
   margin: 0;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.2;
 }
 .info-label {
   display: block;
-  font-size: 9px;
+  font-size: 10px;
   margin-bottom: 1px;
   opacity: 0.8;
 }
@@ -124,19 +135,19 @@ main {
 
 /* ★追加：「メンバー」という文字（spanタグ）を直接狙い撃ち！ */
 .member-header span {
-  font-size: 10px !important; /* ここを好きなサイズ（7px や 6px）に変更してください */
+  font-size: 12px !important; /* ここを好きなサイズ（7px や 6px）に変更してください */
   line-height: 1 !important;
 }
 
 /* ★追加：「n人」の部分も確実に上書きする */
-.member-count-small { 
-  font-size: 10px !important; /* ここも好きなサイズに変更してください */
+.member-count-small {
+  font-size: 12px !important; /* ここも好きなサイズに変更してください */
   line-height: 1 !important;
 }
 .input-members {
   list-style: none;
   padding: 0; margin: 0;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.3;
 }
 
