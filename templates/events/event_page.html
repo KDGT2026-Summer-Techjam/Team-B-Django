@@ -184,12 +184,45 @@
       <button id="btn-toggle-doodle" class="doodle-btn">✏️ 落書きモード: OFF</button>
       
       <div id="doodle-controls" class="doodle-controls hidden">
-        <div class="color-palette">
-          <div class="color-swatch active" data-color="#2F4F2F" style="background: #2F4F2F;"></div> <!-- 深緑 -->
-          <div class="color-swatch" data-color="#800000" style="background: #800000;"></div> <!-- ワインレッド -->
-          <div class="color-swatch" data-color="#8DA0CC" style="background: #8DA0CC;"></div> <!-- 藤色 -->
-          <div class="color-swatch" data-color="#ffffff" style="background: #ffffff; border: 1px solid #ccc;"></div> <!-- 白 -->
+        <!-- ツール切替（ペン／スタンプ）。スタンプはミッション3個クリアで解放 -->
+        <div class="tool-mode-tabs">
+          <button type="button" class="tool-mode-btn active" data-mode="pen">✏️ ペン</button>
+          <button type="button" class="tool-mode-btn locked" data-mode="emoji" id="emoji-mode-btn" disabled>
+            😀 スタンプ<span class="lock-badge">🔒</span>
+          </button>
         </div>
+
+        <!-- 色パレット：ミッション達成数に応じて段階的に解放される -->
+        <div class="color-palette" id="color-palette">
+          <div class="color-swatch active" data-color="#000000" data-tier="0" style="background: #000000;"></div>
+          <div class="color-swatch" data-color="#ffffff" data-tier="0" style="background: #ffffff; border: 1px solid #ccc;"></div>
+          <div class="color-swatch" data-color="#888888" data-tier="0" style="background: #888888;"></div>
+
+          <div class="color-swatch locked" data-color="#E53935" data-tier="1" style="background: #E53935;"></div>
+          <div class="color-swatch locked" data-color="#FB8C00" data-tier="1" style="background: #FB8C00;"></div>
+          <div class="color-swatch locked" data-color="#FDD835" data-tier="1" style="background: #FDD835;"></div>
+
+          <div class="color-swatch locked" data-color="#9CCC65" data-tier="2" style="background: #9CCC65;"></div>
+          <div class="color-swatch locked" data-color="#43A047" data-tier="2" style="background: #43A047;"></div>
+          <div class="color-swatch locked" data-color="#4FC3F7" data-tier="2" style="background: #4FC3F7;"></div>
+
+          <div class="color-swatch locked" data-color="#1E88E5" data-tier="3" style="background: #1E88E5;"></div>
+          <div class="color-swatch locked" data-color="#8E24AA" data-tier="3" style="background: #8E24AA;"></div>
+          <div class="color-swatch locked" data-color="#EC407A" data-tier="3" style="background: #EC407A;"></div>
+        </div>
+
+        <!-- 絵文字スタンプパレット：ミッション3個クリアで表示される -->
+        <div class="emoji-palette hidden" id="emoji-palette">
+          <button type="button" class="emoji-swatch active" data-emoji="⭐">⭐</button>
+          <button type="button" class="emoji-swatch" data-emoji="🎉">🎉</button>
+          <button type="button" class="emoji-swatch" data-emoji="💖">💖</button>
+          <button type="button" class="emoji-swatch" data-emoji="✨">✨</button>
+          <button type="button" class="emoji-swatch" data-emoji="🍁">🍁</button>
+          <button type="button" class="emoji-swatch" data-emoji="🎆">🎆</button>
+          <button type="button" class="emoji-swatch" data-emoji="🌸">🌸</button>
+          <button type="button" class="emoji-swatch" data-emoji="🍧">🍧</button>
+        </div>
+
         <div class="weight-control">
           <span style="font-size: 10px;">太さ:</span>
           <input type="range" id="pen-weight" min="1" max="10" value="3">

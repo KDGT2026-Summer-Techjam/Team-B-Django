@@ -27,6 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentParticipantId = null; //現在のブラウザで参加しているParticipantのIDを保持
   let currentEventData = {}; // 編集用に現在のデータを保持
   const missionIdByOrder = {}; // ミッションのorder番号 -> Mission.id（写真アップロードAPIに必要）
+  // 落書き機能の段階解放を更新する関数。4.のブロックで実体を割り当てる
+  let updateDoodleUnlockState = null;
 
   function renderParticipants(participants) {
     document.getElementById('event-member-count').textContent = `${participants.length}人`;
@@ -339,6 +341,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const mRow = document.querySelector(`.mission-row[data-mission="${num}"]`);
     mRow.className = `mission-row done`;
     document.getElementById(`m-icon-${num}`).textContent = '✔';
+
+    // ミッション達成数に応じて落書き機能（色・スタンプ）の解放状態を更新する
+    if (updateDoodleUnlockState) {
+      const doneCount = document.querySelectorAll('.mission-row.done').length;
+      updateDoodleUnlockState(doneCount);
+    }
   }
 
   function animatePathToNext(currentNum) {
@@ -447,13 +455,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnClear = document.getElementById('btn-clear-doodle');
     const colorSwatches = document.querySelectorAll('.color-swatch');
     const penWeightInput = document.getElementById('pen-weight');
+    const toolModeBtns = document.querySelectorAll('.tool-mode-btn');
+    const emojiSwatches = document.querySelectorAll('.emoji-swatch');
+    const colorPaletteEl = document.getElementById('color-palette');
+    const emojiPaletteEl = document.getElementById('emoji-palette');
+    const weightControlEl = document.querySelector('.weight-control');
+    const emojiModeBtn = document.getElementById('emoji-mode-btn');
 
     let isDrawModeOn = false;
     let isDrawing = false;
     let currentX = 0;
     let currentY = 0;
-    let strokeColor = '#2F4F2F'; // 初期色
+    let strokeColor = '#000000'; // 初期色
     let strokeWidth = 3;
+    let currentTool = 'pen'; // 'pen' | 'emoji'
+    let currentEmoji = '⭐';
 
     // キャンバスのサイズを枠線に合わせる関数
     function resizeCanvas() {
@@ -512,14 +528,29 @@ document.addEventListener('DOMContentLoaded', () => {
       return { x: clientX - rect.left, y: clientY - rect.top };
     }
 
+    // 絵文字スタンプを指定座標に配置する（一度置いたら固定・再配置不可）
+    function stampEmoji(x, y) {
+      const size = 40;
+      ctx.font = `${size}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(currentEmoji, x, y);
+    }
+
     // 描画開始
     function startDrawing(e) {
       if (!isDrawModeOn) return;
-      isDrawing = true;
       const pos = getPos(e);
+
+      if (currentTool === 'emoji') {
+        stampEmoji(pos.x, pos.y); // スタンプはタップした瞬間に確定させ、ドラッグでの連続配置はしない
+        return;
+      }
+
+      isDrawing = true;
       currentX = pos.x;
       currentY = pos.y;
-      
+
       // タップしただけでも点が描けるようにする
       ctx.beginPath();
       ctx.fillStyle = strokeColor;
@@ -561,11 +592,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ツールバー操作
     colorSwatches.forEach(swatch => {
-      swatch.addEventListener('click', (e) => {
+      swatch.addEventListener('click', () => {
+        if (swatch.classList.contains('locked')) return; // 未解放の色は選択不可
         colorSwatches.forEach(s => s.classList.remove('active'));
-        const target = e.target;
-        target.classList.add('active');
-        strokeColor = target.dataset.color;
+        swatch.classList.add('active');
+        strokeColor = swatch.dataset.color;
       });
     });
 
@@ -576,5 +607,56 @@ document.addEventListener('DOMContentLoaded', () => {
     btnClear.addEventListener('click', () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     });
+
+    // ペン／スタンプの切替
+    toolModeBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.disabled) return; // スタンプ未解放時は切り替え不可
+        currentTool = btn.dataset.mode;
+        toolModeBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        const isEmoji = currentTool === 'emoji';
+        if (colorPaletteEl) colorPaletteEl.classList.toggle('hidden', isEmoji);
+        if (weightControlEl) weightControlEl.classList.toggle('hidden', isEmoji);
+        if (emojiPaletteEl) emojiPaletteEl.classList.toggle('hidden', !isEmoji);
+      });
+    });
+
+    // 絵文字スタンプの選択
+    emojiSwatches.forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        emojiSwatches.forEach(s => s.classList.remove('active'));
+        swatch.classList.add('active');
+        currentEmoji = swatch.dataset.emoji;
+      });
+    });
+
+    // ミッション達成数に応じて色パレット・絵文字スタンプの解放状態を更新する
+    function applyDoodleUnlock(doneCount) {
+      colorSwatches.forEach(swatch => {
+        const tier = parseInt(swatch.dataset.tier, 10) || 0;
+        swatch.classList.toggle('locked', tier > doneCount);
+      });
+
+      const emojiUnlocked = doneCount >= 3;
+      if (emojiModeBtn) {
+        emojiModeBtn.disabled = !emojiUnlocked;
+        emojiModeBtn.classList.toggle('locked', !emojiUnlocked);
+      }
+
+      // 解放前にスタンプモードを選んでいた場合はペンに戻す（基本的には起こらない防御的処理）
+      if (!emojiUnlocked && currentTool === 'emoji') {
+        currentTool = 'pen';
+        toolModeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === 'pen'));
+        if (colorPaletteEl) colorPaletteEl.classList.remove('hidden');
+        if (weightControlEl) weightControlEl.classList.remove('hidden');
+        if (emojiPaletteEl) emojiPaletteEl.classList.add('hidden');
+      }
+    }
+
+    updateDoodleUnlockState = applyDoodleUnlock;
+    // ページ読み込み直後（ミッションデータ取得前）の初期状態を反映
+    applyDoodleUnlock(document.querySelectorAll('.mission-row.done').length);
   }
 });
