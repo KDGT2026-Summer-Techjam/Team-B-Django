@@ -319,3 +319,60 @@ input:focus, textarea:focus {
     padding: 4px;
     line-height: 1.5;
 }
+
+/* ================================
+   スマホ幅：カードレイアウトの可変化
+   （event_done/my_eventsの.preview-cardは800px固定の縮小サムネイル表示のため対象外にする）
+================================ */
+@media (max-width: 600px) {
+    .card-container:not(.preview-card) {
+        width: 100%;
+        max-width: 480px;
+        height: auto;
+        padding: 28px 20px;
+        border-radius: 24px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* DOMでは完了/更新ボタンがカード先頭にあるが、モバイルではフォームの下に表示する */
+    .card-container:not(.preview-card) .btn-complete {
+        position: static;
+        order: 2;
+        width: 100%;
+        margin-top: 20px;
+        padding: 12px;
+        font-size: 16px;
+    }
+
+    .card-container:not(.preview-card) .card-content {
+        order: 1;
+        flex-direction: column;
+        height: auto;
+        gap: 20px;
+    }
+
+    .card-container:not(.preview-card) .text-section,
+    .card-container:not(.preview-card) .image-upload {
+        width: 100%;
+    }
+
+    .card-container:not(.preview-card) .image-section {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1 / 1;
+    }
+
+    .card-container:not(.preview-card) .input-title {
+        font-size: 32px;
+        height: auto;
+    }
+
+    .card-container:not(.preview-card) .input-date,
+    .card-container:not(.preview-card) .input-time,
+    .card-container:not(.preview-card) .input-location,
+    .card-container:not(.preview-card) .input-author,
+    .card-container:not(.preview-card) .input-members {
+        width: 100%;
+    }
+}
