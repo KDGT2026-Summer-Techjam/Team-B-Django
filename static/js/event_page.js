@@ -468,7 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentY = 0;
     let strokeColor = '#000000'; // 初期色
     let strokeWidth = 3;
-    let currentTool = 'pen'; // 'pen' | 'emoji'
+    let currentTool = 'pen'; // 'pen' | 'eraser' | 'emoji'
     let currentEmoji = '⭐';
 
     // キャンバスのサイズを枠線に合わせる関数
@@ -542,6 +542,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!isDrawModeOn) return;
       const pos = getPos(e);
 
+      // 消しゴムは重ね塗りではなく塗った部分を透明にする（スタンプにも影響するため先に設定）
+      ctx.globalCompositeOperation = currentTool === 'eraser' ? 'destination-out' : 'source-over';
+
       if (currentTool === 'emoji') {
         stampEmoji(pos.x, pos.y); // スタンプはタップした瞬間に確定させ、ドラッグでの連続配置はしない
         return;
@@ -551,7 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
       currentX = pos.x;
       currentY = pos.y;
 
-      // タップしただけでも点が描けるようにする
+      // タップしただけでも点が描ける（消しゴムなら消える）ようにする
       ctx.beginPath();
       ctx.fillStyle = strokeColor;
       ctx.arc(currentX, currentY, strokeWidth / 2, 0, Math.PI * 2);
@@ -563,7 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!isDrawing || !isDrawModeOn) return;
       e.preventDefault(); // スマホでの引っ張りスクロールなどを強力に阻止
       const pos = getPos(e);
-      
+
       ctx.beginPath();
       ctx.moveTo(currentX, currentY);
       ctx.lineTo(pos.x, pos.y);
@@ -571,7 +574,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.lineWidth = strokeWidth;
       ctx.stroke();
       ctx.closePath();
-      
+
       currentX = pos.x;
       currentY = pos.y;
     }
@@ -617,7 +620,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.classList.add('active');
 
         const isEmoji = currentTool === 'emoji';
-        if (colorPaletteEl) colorPaletteEl.classList.toggle('hidden', isEmoji);
+        // 消しゴムは色を使わないため、色パレットのみ非表示にする（太さは共用するので表示のまま）
+        if (colorPaletteEl) colorPaletteEl.classList.toggle('hidden', isEmoji || currentTool === 'eraser');
         if (weightControlEl) weightControlEl.classList.toggle('hidden', isEmoji);
         if (emojiPaletteEl) emojiPaletteEl.classList.toggle('hidden', !isEmoji);
       });
