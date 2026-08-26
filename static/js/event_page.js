@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentParticipantId = null; //現在のブラウザで参加しているParticipantのIDを保持
   let currentEventData = {}; // 編集用に現在のデータを保持
   const missionIdByOrder = {}; // ミッションのorder番号 -> Mission.id（写真アップロードAPIに必要）
-  // 落書き機能の段階解放を更新する関数。4.のブロックで実体を割り当てる
+  // デコる機能の段階解放を更新する関数。4.のブロックで実体を割り当てる
   let updateDoodleUnlockState = null;
 
   function renderParticipants(participants) {
@@ -250,6 +250,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const fileInput = document.getElementById(`file-${i}`);
     if(fileInput) {
+      // missionIdByOrderが揃う（loadEvent完了）まではアップロード不可にしておく
+      // ラベル経由のクリックもdisabled状態のinputには効かないため、これで競合状態を防げる
+      fileInput.disabled = true;
+
       fileInput.addEventListener('change', (e) => {
         if (e.target.files && e.target.files[0]) {
           const reader = new FileReader();
@@ -342,7 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
     mRow.className = `mission-row done`;
     document.getElementById(`m-icon-${num}`).textContent = '✔';
 
-    // ミッション達成数に応じて落書き機能（色・スタンプ）の解放状態を更新する
+    // ミッション達成数に応じてデコる機能（色・スタンプ）の解放状態を更新する
     if (updateDoodleUnlockState) {
       const doneCount = document.querySelectorAll('.mission-row.done').length;
       updateDoodleUnlockState(doneCount);
@@ -367,6 +371,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     missions.forEach(mission => {
       missionIdByOrder[mission.order] = mission.id;
+
+      // missionIdが確定したのでアップロードを解禁する
+      const fileInput = document.getElementById(`file-${mission.order}`);
+      if (fileInput) fileInput.disabled = false;
 
       const inputEl = document.querySelector(`.mission-row[data-mission="${mission.order}"] .mission-input`);
       if (inputEl) inputEl.value = mission.prompt_text;
@@ -441,7 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================
-  // 4. 落書き（Doodle）機能
+  // 4. デコる（Doodle）機能
   // ==========================================
   const captureArea = document.getElementById('capture-area');
   const canvas = document.getElementById('doodle-canvas');
@@ -500,14 +508,14 @@ document.addEventListener('DOMContentLoaded', () => {
     btnToggleDoodle.addEventListener('click', () => {
       isDrawModeOn = !isDrawModeOn;
       if (isDrawModeOn) {
-        btnToggleDoodle.textContent = '✏️ 落書きモード: ON';
+        btnToggleDoodle.textContent = '✏️ デコるモード: ON';
         btnToggleDoodle.classList.add('active');
         doodleControls.classList.remove('hidden');
         canvas.classList.add('active');
         document.body.style.overflow = 'hidden'; // 背景のスクロールをロック
         if (footerActions) footerActions.classList.add('doodle-disabled'); // 描画中は押せないことを視覚的に示す
       } else {
-        btnToggleDoodle.textContent = '✏️ 落書きモード: OFF';
+        btnToggleDoodle.textContent = '✏️ デコるモード: OFF';
         btnToggleDoodle.classList.remove('active');
         doodleControls.classList.add('hidden');
         canvas.classList.remove('active');
