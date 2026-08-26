@@ -53,6 +53,18 @@
   box-shadow: none;
 }
 
+/* スマホ幅：520pxの枠は画面幅からはみ出すため、縮小率を上げてさらに小さく収める */
+@media (max-width: 600px) {
+  .preview-scale-box {
+    width: 320px;
+    height: 200px;
+  }
+
+  .preview-card {
+    transform: scale(0.4);
+  }
+}
+
 /* プレビュー画面では完了ボタンを非表示 */
 .preview-card .btn-complete {
   display: none;
