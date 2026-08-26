@@ -268,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const missionId = missionIdByOrder[i];
             if (!missionId) {
-              alert('ミッション情報を取得できませんでした。ページを再読み込みしてください');
+              alert('お題情報を取得できませんでした。ページを再読み込みしてください');
               return;
             }
 

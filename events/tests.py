@@ -1299,7 +1299,7 @@ class UploadMissionPhotoTests(TestCase):
         response = self.post(make_photo(), mission_id=self.mission.id + 999)
 
         self.assertEqual(response.status_code, 404)
-        self.assertEqual(response.json(), {"error": "ミッションが見つかりません"})
+        self.assertEqual(response.json(), {"error": "お題が見つかりません"})
 
     def test_upload_to_mission_of_another_event_returns_404(self):
         other_event = Event.objects.create(
@@ -1329,7 +1329,7 @@ class UploadMissionPhotoTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 404)
-        self.assertEqual(response.json(), {"error": "ミッションが見つかりません"})
+        self.assertEqual(response.json(), {"error": "お題が見つかりません"})
 
     def test_accepts_base64_variations(self):
         """改行・パディング省略・大文字の接頭辞はいずれも復号できるため受け付ける。"""
