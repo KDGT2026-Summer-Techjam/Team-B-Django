@@ -29,6 +29,9 @@ header {
     left: 0;
     width: 100%;
     z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .header-title {
@@ -36,6 +39,22 @@ header {
     font-size: 18px;
     font-weight: bold;
     display: inline-block;
+}
+
+/* ハンバーガーメニューボタン：モバイル幅でのみ表示する（PCでは左端のアイコン列を使う） */
+.hamburger-btn {
+    display: none;
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    z-index: 11;
+}
+
+.hamburger-btn svg {
+    width: 24px;
+    height: 24px;
+    fill: #8AB69B;
 }
 
 /* ================================
@@ -116,6 +135,19 @@ header {
     text-decoration: none; /* リンクの下線を消す */
     color: white; /* リンクの文字色を白に強制する */
     width: 100%;
+}
+
+/* スマホ幅：左端の常時表示アイコン列を消し、ヘッダー横のハンバーガーボタンに一本化する */
+@media (max-width: 600px) {
+    .sidebar-trigger {
+        display: none;
+    }
+
+    .hamburger-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
 }
 
 /* aタグの中にあるsvgアイコンのスタイル */
