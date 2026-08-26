@@ -67,8 +67,10 @@
 
             <!-- 右側：画像＆参加エリア -->
             <div class="action-section">
-              <!-- 編集は専用画面（開始時刻・画像にも対応）に集約する。権限が無い場合は編集画面側で403になる -->
+              <!-- 編集は専用画面（開始時刻・画像にも対応）に集約する。作成者以外には編集ボタン自体を表示しない -->
+              {% if is_creator %}
               <a class="btn-edit" href="{% url 'event_edit' public_id=public_id %}">編集</a>
+              {% endif %}
               
               <div class="map-placeholder">
                 <img id="event-image" alt="イベント画像" style="display: none;">
