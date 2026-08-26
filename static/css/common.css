@@ -290,7 +290,7 @@ input:focus, textarea:focus {
     color: #666;
     margin-bottom: 10px;
     width: 100%;
-    height: 70px;
+    min-height: 70px; /* タイトルが2行に折り返した際、固定heightだと後続要素と重なるためmin-heightにする */
 }
 
 .input-date, .input-time, .input-location, .input-author {
