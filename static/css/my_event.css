@@ -119,11 +119,18 @@
 @media (max-width: 600px) {
   .preview-scale-box {
     width: 320px;
-    height: 200px;
+    height: 220px; /* event_done.cssと合わせ、文字拡大分の余裕を持たせる */
   }
 
   .preview-card {
     transform: scale(0.4);
+  }
+
+  /* 縮小率を上げた分、common.css由来の16px前後の文字が実質6px程度になり読めなくなるため、
+     プレビュー内の文字だけ拡大して縮小後の見た目サイズを補正する */
+  .preview-card .input-date,
+  .preview-card .input-location {
+    font-size: 32px;
   }
 }
 
