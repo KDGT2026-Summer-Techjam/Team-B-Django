@@ -29,6 +29,9 @@ header {
     left: 0;
     width: 100%;
     z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .header-title {
@@ -36,6 +39,22 @@ header {
     font-size: 18px;
     font-weight: bold;
     display: inline-block;
+}
+
+/* ハンバーガーメニューボタン：モバイル幅でのみ表示する（PCでは左端のアイコン列を使う） */
+.hamburger-btn {
+    display: none;
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    z-index: 11;
+}
+
+.hamburger-btn svg {
+    width: 24px;
+    height: 24px;
+    fill: #8AB69B;
 }
 
 /* ================================
@@ -116,6 +135,19 @@ header {
     text-decoration: none; /* リンクの下線を消す */
     color: white; /* リンクの文字色を白に強制する */
     width: 100%;
+}
+
+/* スマホ幅：左端の常時表示アイコン列を消し、ヘッダー横のハンバーガーボタンに一本化する */
+@media (max-width: 600px) {
+    .sidebar-trigger {
+        display: none;
+    }
+
+    .hamburger-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
 }
 
 /* aタグの中にあるsvgアイコンのスタイル */
@@ -258,7 +290,7 @@ input:focus, textarea:focus {
     color: #666;
     margin-bottom: 10px;
     width: 100%;
-    height: 70px;
+    min-height: 70px; /* タイトルが2行に折り返した際、固定heightだと後続要素と重なるためmin-heightにする */
 }
 
 .input-date, .input-time, .input-location, .input-author {
@@ -286,4 +318,61 @@ input:focus, textarea:focus {
     height: 60px;
     padding: 4px;
     line-height: 1.5;
+}
+
+/* ================================
+   スマホ幅：カードレイアウトの可変化
+   （event_done/my_eventsの.preview-cardは800px固定の縮小サムネイル表示のため対象外にする）
+================================ */
+@media (max-width: 600px) {
+    .card-container:not(.preview-card) {
+        width: 100%;
+        max-width: 480px;
+        height: auto;
+        padding: 28px 20px;
+        border-radius: 24px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* DOMでは完了/更新ボタンがカード先頭にあるが、モバイルではフォームの下に表示する */
+    .card-container:not(.preview-card) .btn-complete {
+        position: static;
+        order: 2;
+        width: 100%;
+        margin-top: 20px;
+        padding: 12px;
+        font-size: 16px;
+    }
+
+    .card-container:not(.preview-card) .card-content {
+        order: 1;
+        flex-direction: column;
+        height: auto;
+        gap: 20px;
+    }
+
+    .card-container:not(.preview-card) .text-section,
+    .card-container:not(.preview-card) .image-upload {
+        width: 100%;
+    }
+
+    .card-container:not(.preview-card) .image-section {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1 / 1;
+    }
+
+    .card-container:not(.preview-card) .input-title {
+        font-size: 32px;
+        height: auto;
+    }
+
+    .card-container:not(.preview-card) .input-date,
+    .card-container:not(.preview-card) .input-time,
+    .card-container:not(.preview-card) .input-location,
+    .card-container:not(.preview-card) .input-author,
+    .card-container:not(.preview-card) .input-members {
+        width: 100%;
+    }
 }

@@ -3,13 +3,34 @@ document.addEventListener('DOMContentLoaded', () => {
   const trigger = document.getElementById('sidebar-trigger');
   const sidebar = document.getElementById('sidebar');
 
-  // トリガー（左端30px）にマウスが入ったら、サイドバーに 'open' クラスを付ける
+  // トリガー（左端30px）にマウスが入ったら、サイドバーに 'open' クラスを付ける（PC向け）
   trigger.addEventListener('mouseenter', () => {
       sidebar.classList.add('open');
   });
 
-  // サイドバーからマウスが外れたら、'open' クラスを外す
+  // サイドバーからマウスが外れたら、'open' クラスを外す（PC向け）
   sidebar.addEventListener('mouseleave', () => {
+      sidebar.classList.remove('open');
+  });
+
+  // スマホなど mouseenter が発火しない端末向けに、タップでも開閉できるようにする
+  trigger.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+  });
+
+  // モバイル幅ではCSS側でトリガーのアイコン列を隠し、代わりにヘッダー横のハンバーガーボタンで開閉する
+  const hamburgerBtn = document.getElementById('hamburger-btn');
+  if (hamburgerBtn) {
+      hamburgerBtn.addEventListener('click', () => {
+          sidebar.classList.toggle('open');
+      });
+  }
+
+  // 開いている状態でサイドバーの外側をタップしたら閉じる（スマホには mouseleave が無いため）
+  document.addEventListener('click', (e) => {
+      if (!sidebar.classList.contains('open')) return;
+      if (sidebar.contains(e.target) || trigger.contains(e.target)) return;
+      if (hamburgerBtn && hamburgerBtn.contains(e.target)) return;
       sidebar.classList.remove('open');
   });
 });

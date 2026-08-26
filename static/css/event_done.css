@@ -14,6 +14,14 @@
   text-align: center;
 }
 
+/* スマホ幅：縮小されたプレビューカードに対して見出しが大きすぎるため縮小する */
+@media (max-width: 600px) {
+  .done-title {
+    font-size: 22px;
+    letter-spacing: 1px;
+  }
+}
+
 .done-subtitle {
   font-size: 16px;
   color: #555;
@@ -51,6 +59,33 @@
   margin: 0;
   border: none; /* 親の枠線を使うので自身の枠線を消す */
   box-shadow: none;
+}
+
+/* スマホ幅：520pxの枠は画面幅からはみ出すため、縮小率を上げてさらに小さく収める */
+@media (max-width: 600px) {
+  .preview-scale-box {
+    width: 320px;
+    height: 220px; /* 文字拡大でメンバー欄が伸びた分、角丸に隠れないよう少し余裕を持たせる */
+  }
+
+  .preview-card {
+    transform: scale(0.4);
+  }
+
+  /* 縮小率を上げた分、common.css由来の16px前後の文字が実質6px程度になり読めなくなるため、
+     プレビュー内の文字だけ拡大して縮小後の見た目サイズを補正する */
+  .preview-card .input-date,
+  .preview-card .input-time,
+  .preview-card .input-location,
+  .preview-card .input-author,
+  .preview-card .members-area span {
+    font-size: 32px;
+  }
+
+  .preview-card .input-members {
+    font-size: 30px;
+    min-height: 60px; /* 文字拡大で1行に収まらない場合に後続要素と重ならないようheight固定をやめる */
+  }
 }
 
 /* プレビュー画面では完了ボタンを非表示 */
