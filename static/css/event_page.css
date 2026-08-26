@@ -123,14 +123,14 @@ main {
 }
 /* 箱の高さや配置の調整（先ほどの設定） */
 .member-header {
-  margin: 0 !important; 
-  padding: 0 !important; 
+  margin: 0 !important;
+  padding: 0 !important;
   display: flex;
   align-items: baseline;
   gap: 5px;
-  line-height: 1 !important; 
-  height: 10px; 
-  margin-bottom: 2px !important; 
+  line-height: 1 !important;
+  min-height: 10px; /* 極端に狭い画面で折り返した際、固定heightだと下の要素と重なるためmin-heightにする */
+  margin-bottom: 2px !important;
 }
 
 /* ★追加：「メンバー」という文字（spanタグ）を直接狙い撃ち！ */
