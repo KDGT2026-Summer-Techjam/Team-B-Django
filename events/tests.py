@@ -1387,7 +1387,7 @@ class UploadMissionPhotoTests(TestCase):
     def test_photo_over_size_limit_returns_400(self):
         self.client.cookies["visitor_id"] = "creator"
         prefix = "data:image/png;base64,"
-        photo = prefix + "A" * (5 * 1024 * 1024)
+        photo = prefix + "A" * (14 * 1024 * 1024)
 
         response = self.post(photo)
 
@@ -1508,7 +1508,7 @@ class CreateEventImageTests(TestCase):
 
     def test_create_event_with_oversized_image_returns_400(self):
         prefix = "data:image/png;base64,"
-        self.payload["image"] = prefix + "A" * (5 * 1024 * 1024)
+        self.payload["image"] = prefix + "A" * (14 * 1024 * 1024)
 
         response = self.post(self.payload)
 
@@ -1604,7 +1604,7 @@ class UpdateEventImageTests(TestCase):
 
     def test_update_with_oversized_image_returns_400(self):
         prefix = "data:image/png;base64,"
-        oversized = prefix + "A" * (5 * 1024 * 1024)
+        oversized = prefix + "A" * (14 * 1024 * 1024)
 
         response = self.patch({"image": oversized})
 

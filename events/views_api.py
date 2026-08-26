@@ -49,8 +49,8 @@ PHOTO_DATA_URL_PREFIXES = (
     "data:image/png;base64,",
     "data:image/webp;base64,",
 )
-# Base64文字列の長さで5MB（元画像で約3.75MB相当）
-PHOTO_MAX_LENGTH = 5 * 1024 * 1024
+# Base64文字列の長さで14MB（元画像で約10.5MB相当）
+PHOTO_MAX_LENGTH = 14 * 1024 * 1024
 
 
 def _matches(value, expected):
