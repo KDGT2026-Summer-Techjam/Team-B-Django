@@ -1,0 +1,17 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+    <title>{% block title %}Inby{% endblock %}</title>
+    <!-- 共通CSSの読み込み -->
+    <link rel="stylesheet" href="{% static 'css/common.css' %}">
+    <!-- このページ専用の追加CSS/JS -->
+    {% block extra_head %}{% endblock %}
+</head>
+<body{% block body_attrs %}{% endblock %}>
+{% block body %}{% endblock %}
+</body>
+</html>

@@ -1,15 +1,13 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Card - Inby</title>
-    <link rel="stylesheet" href="{% static 'css/common.css' %}">
-    <!-- このページ専用の追加CSS -->
+
+{% block title %}My Card - Inby{% endblock %}
+
+{% block extra_head %}
     <link rel="stylesheet" href="{% static 'css/my_event.css' %}">
-</head>
-<body>
+{% endblock %}
+
+{% block body %}
 
     <!-- ヘッダー -->
     <header>
@@ -49,7 +47,7 @@
             </li>
         </ul>
     </aside>
-    
+
     <!-- メインコンテンツ -->
     <div class="main-content my-events-layout">
         <h1 class="page-title">My Card</h1>
@@ -64,5 +62,4 @@
 
     <script src="{% static 'js/script.js' %}"></script>
     <script src="{% static 'js/my_event.js' %}"></script>
-</body>
-</html>
+{% endblock %}

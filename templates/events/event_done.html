@@ -1,18 +1,16 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>投稿完了 - Inby</title>
-    <!-- 共通CSSの読み込み -->
-    <link rel="stylesheet" href="{% static 'css/common.css' %}">
-    <!-- このページ専用の追加CSS -->
-    <link rel="stylesheet" href="{% static 'css/event_done.css' %}">
-</head>
-<!-- views.pyから渡される public_id のみをJSへ渡すための器として残します -->
-<body data-public-id="{{ public_id }}">
 
+{% block title %}投稿完了 - Inby{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'css/event_done.css' %}">
+{% endblock %}
+
+<!-- views.pyから渡される public_id のみをJSへ渡すための器として残します -->
+{% block body_attrs %} data-public-id="{{ public_id }}"{% endblock %}
+
+{% block body %}
     <!-- ヘッダー -->
     <header>
         <button type="button" id="hamburger-btn" class="hamburger-btn" aria-label="メニューを開く">
@@ -53,7 +51,7 @@
             </li>
         </ul>
     </aside>
-    
+
     <!-- メインコンテンツ -->
     <div class="main-content done-page-layout">
         <h1 class="done-title">カードが投稿されました！</h1>
@@ -62,11 +60,11 @@
         <div class="preview-wrapper">
             <!-- 縮小表示用の枠 -->
             <div class="preview-scale-box">
-                
+
                 <div class="card-container preview-card">
                     <!-- プレビューでは完了ボタンを非表示 -->
                     <button class="btn-complete" style="display: none;">完了</button>
-                    
+
                     <div class="card-content">
                         <div class="text-section">
                             <!-- JSでデータを挿入するための id を付与し、中身を空（またはデフォルト値）にします -->
@@ -75,7 +73,7 @@
                             <div class="input-time" id="done-time" hidden></div>
                             <div class="input-location" id="done-location"></div>
                             <div class="input-author" id="done-author"></div>
-                        
+
                             <div class="members-area">
                                 <span>メンバー</span>
                                 <!-- メンバー一覧もJSで組み立てます -->
@@ -92,7 +90,7 @@
                         </div>
                     </div>
                 </div>
-                
+
             </div>
 
             <!-- アクションアイコン -->
@@ -123,5 +121,4 @@
     <script src="{% static 'js/script.js' %}"></script>
     <!-- 追加: 完了画面専用のJSロジック -->
     <script src="{% static 'js/event_done.js' %}"></script>
-</body>
-</html>
+{% endblock %}

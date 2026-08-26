@@ -516,7 +516,7 @@ def upload_mission_photo(request, public_id, mission_id):
     try:
         mission = event.missions.get(id=mission_id)
     except (Mission.DoesNotExist, ValueError):
-        return JsonResponse({"error": "ミッションが見つかりません"}, status=404)
+        return JsonResponse({"error": "お題が見つかりません"}, status=404)
 
     try:
         data = json.loads(request.body)
