@@ -1,21 +1,19 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>誘いを作成 - Inby</title>
-    <!-- common.cssを読み込む -->
-    <link rel="stylesheet" href="{% static 'css/common.css' %}">
-</head>
-<body>
+
+{% block title %}誘いを作成 - Inby{% endblock %}
+
+{% block body %}
     <!-- docs/設計.md「CSRFの扱い」: JSはdocument.cookieのcsrftokenを読み、
          X-CSRFTokenヘッダに付けてfetchする。このタグでCookieを発行する -->
     {% csrf_token %}
 
     <!-- ヘッダー -->
     <header>
-        <div class="header-title">new_event.html</div>
+        <button type="button" id="hamburger-btn" class="hamburger-btn" aria-label="メニューを開く">
+            <svg viewBox="0 0 24 24"><path d="M4 4h16v2H4zm0 6h16v2H4zm0 6h16v2H4z"/></svg>
+        </button>
+        <div class="header-title">招待カードを作成</div>
     </header>
 
     <!-- サイドバー表示用のトリガー -->
@@ -24,7 +22,7 @@
         <svg viewBox="0 0 24 24"><path d="M4 4h16v2H4zm0 6h16v2H4zm0 6h16v2H4z"/></svg>
         <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
     </div>
-    
+
     <!-- サイドバー -->
     <aside id="sidebar" class="sidebar">
         <ul class="menu">
@@ -51,13 +49,13 @@
             </li>
         </ul>
     </aside>
-    
+
     <!-- メインコンテンツ -->
     <div class="main-content">
         <div class="card-container">
             <!-- ボタンにidを付与し、初期状態はdisabled（無効化）にしておく -->
             <button class="btn-complete" id="btn-complete" disabled>完了</button>
-            
+
             <div class="card-content">
                 <!-- 左側のテキスト入力エリア -->
                 <div class="text-section">
@@ -65,7 +63,7 @@
                         <input type="text" id="input-title" class="input-title" placeholder="タイトル" required>
                         <p class="error-msg" id="error-title" style="color: red; font-size: 12px; margin: 0; display: none;"></p>
                     </div>
-                    
+
                     <div class="input-group">
                         <!-- type="date"化し、過去日不可はJS側でmin属性を設定します -->
                         <input type="date" id="input-date" class="input-date" placeholder="YYYY/MM/DD" required>
@@ -88,10 +86,10 @@
                         <p class="error-msg" id="error-author" style="color: red; font-size: 12px; margin: 0; display: none;"></p>
                     </div>
 
-                    <div class="members-area">
+                    <!-- <div class="members-area">
                         <span>メンバー</span>
                         <p class="input-members">名前</p>
-                    </div>
+                    </div> -->
                 </div>
 
                 <!-- 右側の画像エリア（縦積みにして、エラー表示時もcard-contentの横並びを崩さない） -->
@@ -115,5 +113,4 @@
     <script src="{% static 'js/script.js' %}"></script>
     <!-- 新規作成するフォーム用ロジック -->
     <script src="{% static 'js/new_event.js' %}"></script>
-</body>
-</html>
+{% endblock %}

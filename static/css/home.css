@@ -53,3 +53,21 @@
 .cta-button:active {
   transform: scale(0.98); /* 押したときに少しだけ沈む動き */
 }
+
+/* スマホ幅：PC向けの巨大なフォントサイズ・横paddingを画面に収まるよう縮小する */
+@media (max-width: 600px) {
+  .brand-title {
+    font-size: 44px;
+    letter-spacing: 2px;
+  }
+
+  .catchphrase {
+    font-size: 15px;
+    margin-bottom: 30px;
+  }
+
+  .cta-button {
+    padding: 16px 48px;
+    font-size: 16px;
+  }
+}

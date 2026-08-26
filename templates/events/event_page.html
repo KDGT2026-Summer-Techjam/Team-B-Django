@@ -1,22 +1,30 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>誘いのページ - Inby</title>
-  <link rel="stylesheet" href="{% static 'css/common.css' %}">
+
+{% block title %}誘いのページ - Inby{% endblock %}
+
+{% block extra_head %}
   <!-- キャッシュ回避のためのパラメータを付与 -->
-  <link rel="stylesheet" href="{% static 'css/event_page.css' %}?v=6">
+  <link rel="stylesheet" href="{% static 'css/event_page.css' %}?v=9">
 
   <!-- 画像ダウンロード用のライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <script src="{% static 'js/script.js' %}" defer></script>
   <script src="{% static 'js/event_page.js' %}" defer></script>
-</head>
-<body data-public-id="{{ public_id }}" data-is-participant="{{ is_participant|yesno:"true,false" }}">
+{% endblock %}
+
+{% block body_attrs %} data-public-id="{{ public_id }}" data-is-participant="{{ is_participant|yesno:"true,false" }}"{% endblock %}
+
+{% block body %}
   {% csrf_token %}
+
+  <!-- モバイル幅ではこのハンバーガーボタンからサイドバーを開く（PC幅ではsidebar-triggerのホバーを使う） -->
+  <header>
+    <button type="button" id="hamburger-btn" class="hamburger-btn" aria-label="メニューを開く">
+      <svg viewBox="0 0 24 24"><path d="M4 4h16v2H4zm0 6h16v2H4zm0 6h16v2H4z"/></svg>
+    </button>
+  </header>
 
   <div id="sidebar-trigger" class="sidebar-trigger"></div>
   <aside id="sidebar" class="sidebar">
@@ -31,31 +39,32 @@
     <div class="main-content">
       <!-- DL時にこのコンテナ全体を画像化します -->
       <div class="event-page-container" id="capture-area">
-        
+
         <!-- ================= 上部：イベント詳細 ================= -->
         <div class="event-header-card">
+          <!-- タイトルは2カラムの外に出し、カード全体の幅を使って表示する -->
+          <h1 id="event-title">タイトル</h1>
           <div class="header-inner">
             <!-- 左側：テキストエリア -->
             <div class="text-section">
-              <h1 id="event-title">タイトル</h1>
               <div class="date-row">
-                <p id="event-date">YYYY/MM/DD</p>
-                <p id="event-days-left">あと3日</p>
+                <p id="event-date">日時</p>
+                <p id="event-days-left">残り日数</p>
               </div>
-              <p id="event-time" hidden>hh:mm</p>
-              
+              <p id="event-time" hidden>時刻</p>
+
               <div class="info-group">
                 <span class="info-label">場所</span>
                 <p id="event-location">場所</p>
               </div>
               <div class="info-group">
-                <span class="info-label">投稿者</span>
-                <p id="event-author">投稿者</p>
+                <span class="info-label">主催者</span>
+                <p id="event-author">主催者</p>
               </div>
 
               <div class="members-area">
                 <div class="member-header">
-                  <span>メンバー</span>
+                  <span>参加メンバー</span>
                   <span id="event-member-count" class="member-count-small">0人</span>
                 </div>
                 <ul class="input-members" id="event-member-list">
@@ -66,16 +75,18 @@
 
             <!-- 右側：画像＆参加エリア -->
             <div class="action-section">
-              <!-- 編集は専用画面（開始時刻・画像にも対応）に集約する。権限が無い場合は編集画面側で403になる -->
+              <!-- 編集は専用画面（開始時刻・画像にも対応）に集約する。作成者以外には編集ボタン自体を表示しない -->
+              {% if is_creator %}
               <a class="btn-edit" href="{% url 'event_edit' public_id=public_id %}">編集</a>
-              
+              {% endif %}
+
               <div class="map-placeholder">
                 <img id="event-image" alt="イベント画像" style="display: none;">
               </div>
-              
+
               <div class="join-action-wrapper">
                 <div class="join-area" id="event-join-area">
-                  <input type="text" id="event-name-input" placeholder="名前 |" maxlength="255">
+                  <input type="text" id="event-name-input" placeholder="名前" maxlength="255">
                   <button class="btn-complete" id="event-join-btn">参加する</button>
                 </div>
 
@@ -94,22 +105,22 @@
           <div class="sr-header">
             <h2>STAMP RALLY</h2>
           </div>
-          
+
           <!-- ミッション入力リスト -->
           <div class="missions-container">
             <div class="mission-row" data-mission="1">
               <span class="m-icon" id="m-icon-1">🔒</span>
-              <span>ミッション 1</span>
+              <span>お題 1</span>
               <input type="text" class="mission-input" readonly>
             </div>
             <div class="mission-row" data-mission="2">
               <span class="m-icon" id="m-icon-2">🔒</span>
-              <span>ミッション 2</span>
+              <span>お題 2</span>
               <input type="text" class="mission-input" readonly>
             </div>
             <div class="mission-row" data-mission="3">
               <span class="m-icon" id="m-icon-3">🔒</span>
-              <span>ミッション 3</span>
+              <span>お題 3</span>
               <input type="text" class="mission-input" readonly>
             </div>
           </div>
@@ -180,15 +191,49 @@
 
     <!-- ★追加2：落書きツールバー（DL画像に入らないよう #capture-area の外に配置） -->
     <div id="doodle-toolbar" class="doodle-toolbar">
-      <button id="btn-toggle-doodle" class="doodle-btn">✏️ 落書きモード: OFF</button>
-      
+      <button id="btn-toggle-doodle" class="doodle-btn">✏️ デコるモード: OFF</button>
+
       <div id="doodle-controls" class="doodle-controls hidden">
-        <div class="color-palette">
-          <div class="color-swatch active" data-color="#2F4F2F" style="background: #2F4F2F;"></div> <!-- 深緑 -->
-          <div class="color-swatch" data-color="#800000" style="background: #800000;"></div> <!-- ワインレッド -->
-          <div class="color-swatch" data-color="#8DA0CC" style="background: #8DA0CC;"></div> <!-- 藤色 -->
-          <div class="color-swatch" data-color="#ffffff" style="background: #ffffff; border: 1px solid #ccc;"></div> <!-- 白 -->
+        <!-- ツール切替（ペン／スタンプ）。スタンプはミッション3個クリアで解放 -->
+        <div class="tool-mode-tabs">
+          <button type="button" class="tool-mode-btn active" data-mode="pen">✏️ ペン</button>
+          <button type="button" class="tool-mode-btn" data-mode="eraser">🧹 消しゴム</button>
+          <button type="button" class="tool-mode-btn locked" data-mode="emoji" id="emoji-mode-btn" disabled>
+            😀 スタンプ<span class="lock-badge">🔒</span>
+          </button>
         </div>
+
+        <!-- 色パレット：ミッション達成数に応じて段階的に解放される -->
+        <div class="color-palette" id="color-palette">
+          <div class="color-swatch active" data-color="#000000" data-tier="0" style="background: #000000;"></div>
+          <div class="color-swatch" data-color="#ffffff" data-tier="0" style="background: #ffffff; border: 1px solid #ccc;"></div>
+          <div class="color-swatch" data-color="#888888" data-tier="0" style="background: #888888;"></div>
+
+          <div class="color-swatch locked" data-color="#E53935" data-tier="1" style="background: #E53935;"></div>
+          <div class="color-swatch locked" data-color="#FB8C00" data-tier="1" style="background: #FB8C00;"></div>
+          <div class="color-swatch locked" data-color="#FDD835" data-tier="1" style="background: #FDD835;"></div>
+
+          <div class="color-swatch locked" data-color="#9CCC65" data-tier="2" style="background: #9CCC65;"></div>
+          <div class="color-swatch locked" data-color="#43A047" data-tier="2" style="background: #43A047;"></div>
+          <div class="color-swatch locked" data-color="#4FC3F7" data-tier="2" style="background: #4FC3F7;"></div>
+
+          <div class="color-swatch locked" data-color="#1E88E5" data-tier="3" style="background: #1E88E5;"></div>
+          <div class="color-swatch locked" data-color="#8E24AA" data-tier="3" style="background: #8E24AA;"></div>
+          <div class="color-swatch locked" data-color="#EC407A" data-tier="3" style="background: #EC407A;"></div>
+        </div>
+
+        <!-- 絵文字スタンプパレット：ミッション3個クリアで表示される -->
+        <div class="emoji-palette hidden" id="emoji-palette">
+          <button type="button" class="emoji-swatch active" data-emoji="⭐">⭐</button>
+          <button type="button" class="emoji-swatch" data-emoji="🎉">🎉</button>
+          <button type="button" class="emoji-swatch" data-emoji="💖">💖</button>
+          <button type="button" class="emoji-swatch" data-emoji="✨">✨</button>
+          <button type="button" class="emoji-swatch" data-emoji="🍁">🍁</button>
+          <button type="button" class="emoji-swatch" data-emoji="🎆">🎆</button>
+          <button type="button" class="emoji-swatch" data-emoji="🌸">🌸</button>
+          <button type="button" class="emoji-swatch" data-emoji="🍧">🍧</button>
+        </div>
+
         <div class="weight-control">
           <span style="font-size: 10px;">太さ:</span>
           <input type="range" id="pen-weight" min="1" max="10" value="3">
@@ -197,6 +242,4 @@
       </div>
     </div>
   </main>
-
-</body>
-</html>
+{% endblock %}

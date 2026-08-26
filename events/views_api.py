@@ -49,8 +49,8 @@ PHOTO_DATA_URL_PREFIXES = (
     "data:image/png;base64,",
     "data:image/webp;base64,",
 )
-# Base64文字列の長さで5MB（元画像で約3.75MB相当）
-PHOTO_MAX_LENGTH = 5 * 1024 * 1024
+# Base64文字列の長さで14MB（元画像で約10.5MB相当）
+PHOTO_MAX_LENGTH = 14 * 1024 * 1024
 
 
 def _matches(value, expected):
@@ -516,7 +516,7 @@ def upload_mission_photo(request, public_id, mission_id):
     try:
         mission = event.missions.get(id=mission_id)
     except (Mission.DoesNotExist, ValueError):
-        return JsonResponse({"error": "ミッションが見つかりません"}, status=404)
+        return JsonResponse({"error": "お題が見つかりません"}, status=404)
 
     try:
         data = json.loads(request.body)

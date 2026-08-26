@@ -17,6 +17,9 @@ def event_page(request, public_id):
     is_participant = event.participants.filter(
         visitor_id=request.visitor_id
     ).exists()
+    is_creator = bool(event.creator_visitor_id) and (
+        event.creator_visitor_id == request.visitor_id
+    )
     return render(
         request,
         "events/event_page.html",
@@ -24,6 +27,7 @@ def event_page(request, public_id):
             "public_id": public_id,
             "event": event,
             "is_participant": is_participant,
+            "is_creator": is_creator,
         },
     )
 
