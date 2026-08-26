@@ -1,11 +1,9 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>誘いのページ - Inby</title>
-  <link rel="stylesheet" href="{% static 'css/common.css' %}">
+
+{% block title %}誘いのページ - Inby{% endblock %}
+
+{% block extra_head %}
   <!-- キャッシュ回避のためのパラメータを付与 -->
   <link rel="stylesheet" href="{% static 'css/event_page.css' %}?v=9">
 
@@ -14,8 +12,11 @@
 
   <script src="{% static 'js/script.js' %}" defer></script>
   <script src="{% static 'js/event_page.js' %}" defer></script>
-</head>
-<body data-public-id="{{ public_id }}" data-is-participant="{{ is_participant|yesno:"true,false" }}">
+{% endblock %}
+
+{% block body_attrs %} data-public-id="{{ public_id }}" data-is-participant="{{ is_participant|yesno:"true,false" }}"{% endblock %}
+
+{% block body %}
   {% csrf_token %}
 
   <!-- モバイル幅ではこのハンバーガーボタンからサイドバーを開く（PC幅ではsidebar-triggerのホバーを使う） -->
@@ -38,7 +39,7 @@
     <div class="main-content">
       <!-- DL時にこのコンテナ全体を画像化します -->
       <div class="event-page-container" id="capture-area">
-        
+
         <!-- ================= 上部：イベント詳細 ================= -->
         <div class="event-header-card">
           <!-- タイトルは2カラムの外に出し、カード全体の幅を使って表示する -->
@@ -51,7 +52,7 @@
                 <p id="event-days-left">残り日数</p>
               </div>
               <p id="event-time" hidden>時刻</p>
-              
+
               <div class="info-group">
                 <span class="info-label">場所</span>
                 <p id="event-location">場所</p>
@@ -78,11 +79,11 @@
               {% if is_creator %}
               <a class="btn-edit" href="{% url 'event_edit' public_id=public_id %}">編集</a>
               {% endif %}
-              
+
               <div class="map-placeholder">
                 <img id="event-image" alt="イベント画像" style="display: none;">
               </div>
-              
+
               <div class="join-action-wrapper">
                 <div class="join-area" id="event-join-area">
                   <input type="text" id="event-name-input" placeholder="名前" maxlength="255">
@@ -104,7 +105,7 @@
           <div class="sr-header">
             <h2>STAMP RALLY</h2>
           </div>
-          
+
           <!-- ミッション入力リスト -->
           <div class="missions-container">
             <div class="mission-row" data-mission="1">
@@ -191,7 +192,7 @@
     <!-- ★追加2：落書きツールバー（DL画像に入らないよう #capture-area の外に配置） -->
     <div id="doodle-toolbar" class="doodle-toolbar">
       <button id="btn-toggle-doodle" class="doodle-btn">✏️ デコるモード: OFF</button>
-      
+
       <div id="doodle-controls" class="doodle-controls hidden">
         <!-- ツール切替（ペン／スタンプ）。スタンプはミッション3個クリアで解放 -->
         <div class="tool-mode-tabs">
@@ -241,6 +242,4 @@
       </div>
     </div>
   </main>
-
-</body>
-</html>
+{% endblock %}
