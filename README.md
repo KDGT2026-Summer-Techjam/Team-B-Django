@@ -71,6 +71,7 @@ python manage.py runserver
 | [docs/setup.md](docs/setup.md) | 環境構築手順 |
 | [docs/deploy.md](docs/deploy.md) | デプロイ手順（Render） |
 | [docs/pr-guide.md](docs/pr-guide.md) | PR作成手順書 |
+| [docs/担当機能.md](docs/担当機能.md) | メンバーごとの担当機能・技術的なポイント |
 
 ---
 
@@ -144,6 +145,8 @@ Team-B-Django/
 | PM / デプロイ | 1 | @Karuhito |
 | フロントエンド | 2 | @amano02 @jinki827 |
 | バックエンド | 2 | @rs0325 @mudesu |
+
+メンバーごとの担当機能の詳細は [docs/担当機能.md](docs/担当機能.md) を参照してください。
 
 ---
 
