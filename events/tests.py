@@ -394,9 +394,9 @@ class EventPageTests(TestCase):
             "event-member-count",
             "event-member-list",
             "event-join-area",
-            "event-joined-message",
             "event-name-input",
             "event-join-btn",
+            "event-cancel-join-btn",
             "event-error",
         ):
             with self.subTest(element_id=element_id):
@@ -1723,7 +1723,8 @@ class PublicIdCollisionTests(TestCase):
     def test_create_event_api_returns_error_when_public_id_cannot_be_issued(self):
         payload = {
             "title": "ぶどう狩り",
-            "event_date": "2026-10-01",
+            # APIは過去の日付を拒否するため、固定日付ではなく、常に未来になる日付を使う
+            "event_date": future_date_str(10, 1),
             "location": "新潟県南魚沼市",
             "organizer_name": "鈴木",
         }
@@ -1748,7 +1749,8 @@ class PublicIdCollisionTests(TestCase):
     def test_create_event_api_succeeds_when_a_retry_frees_the_public_id(self):
         payload = {
             "title": "ぶどう狩り",
-            "event_date": "2026-10-01",
+            # APIは過去の日付を拒否するため、固定日付ではなく、常に未来になる日付を使う
+            "event_date": future_date_str(10, 1),
             "location": "新潟県南魚沼市",
             "organizer_name": "鈴木",
         }
@@ -1766,3 +1768,46 @@ class PublicIdCollisionTests(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()["public_id"], "ab34cd")
         self.assertEqual(Event.objects.count(), 2)
+
+
+class VisitorIdCookieSecureTests(TestCase):
+    """visitor_id Cookie の Secure 属性は、HTTPS のときだけ付く。
+
+    visitor_id はこのアプリの「ログイン」に当たる（自分のイベント・編集権限・参加済みの判定に使う）ため、
+    HTTPS では Secure を付けて、HTTP では送らないようにする。
+    ローカル開発（http://localhost）では Secure を付けず、これまでどおり動く。
+    """
+
+    def test_visitor_id_cookie_is_secure_over_https(self):
+        response = self.client.get("/", secure=True)
+
+        cookie = response.cookies["visitor_id"]
+        self.assertTrue(cookie["secure"])
+        self.assertTrue(cookie["httponly"])
+        self.assertEqual(cookie["samesite"], "Lax")
+
+    def test_visitor_id_cookie_is_not_secure_over_http(self):
+        response = self.client.get("/")
+
+        cookie = response.cookies["visitor_id"]
+        self.assertFalse(cookie["secure"])
+        self.assertTrue(cookie["httponly"])
+
+    def test_existing_visitor_id_cookie_is_reissued_as_secure_over_https(self):
+        """Secure なしで発行済みの Cookie も、HTTPS でアクセスされたら、同じ値のまま Secure 付きで再設定する。"""
+        self.client.cookies["visitor_id"] = "existing-visitor"
+
+        response = self.client.get("/", secure=True)
+
+        cookie = response.cookies["visitor_id"]
+        self.assertEqual(cookie.value, "existing-visitor")
+        self.assertTrue(cookie["secure"])
+        self.assertTrue(cookie["httponly"])
+
+    def test_existing_visitor_id_cookie_is_not_reissued_over_http(self):
+        """HTTP（ローカル開発）では、発行済みの Cookie を再設定しない（これまでどおり）。"""
+        self.client.cookies["visitor_id"] = "existing-visitor"
+
+        response = self.client.get("/")
+
+        self.assertNotIn("visitor_id", response.cookies)
