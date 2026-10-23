@@ -11,20 +11,22 @@
 | --- | --- |
 | 本番URL | https://seasonhub-web.onrender.com |
 | Render サービス名 | seasonhub-web |
-| DB名 | seasonhub-db |
+| DB | Supabase（無料プラン・PostgreSQL） |
 | リージョン | Singapore |
 
 ---
 
 ## 0. Blueprint（render.yaml）を使ったデプロイ（推奨）
 
-リポジトリ直下の `render.yaml` に Web Service（`seasonhub-web`）と PostgreSQL（`seasonhub-db`）の設定を定義済みです。
-Render ダッシュボードで以下を行うだけで、Build/Start Command・環境変数（`SECRET_KEY` の生成含む）・DB接続がすべて自動設定されます。
+リポジトリ直下の `render.yaml` に Web Service（`seasonhub-web`）の設定を定義済みです。
+DB は Render ではなく **Supabase** を使うため、`render.yaml` には DB を定義していません（経緯は「1. PostgreSQL」参照）。
+Render ダッシュボードで以下を行うと、Build/Start Command・環境変数（`SECRET_KEY` の生成含む）が自動設定されます。**`DATABASE_URL` だけは手動で設定します。**
 
 1. Render ダッシュボード → **New** → **Blueprint**
 2. このリポジトリを選択（GitHub 連携が必要）
 3. `render.yaml` の内容が読み込まれるので、内容を確認して **Apply**
-4. 初回デプロイが完了したら、本番URLをこのファイルと `README.md` に追記する
+4. `seasonhub-web` の Environment で、`DATABASE_URL` に Supabase の接続文字列を設定する（「2. 環境変数」参照）
+5. 初回デプロイが完了したら、本番URLをこのファイルと `README.md` に追記する
 
 `render.yaml` を変更した場合は、Render ダッシュボードで再度 Blueprint を反映（Sync）してください。
 以下の「1. Render 側の設定」以降は、Blueprint を使わず手動でセットアップする場合の手順です。
@@ -45,10 +47,13 @@ Render ダッシュボードで以下を行うだけで、Build/Start Command・
 > `config` の部分は `settings.py` があるディレクトリ名です。プロジェクト名に合わせて読み替えてください。
 > **`migrate` を Build Command に入れておく**と、デプロイのたびに自動でテーブルが更新されます。手動実行を忘れて 500 になる事故を防げます。
 
-### PostgreSQL
+### PostgreSQL（Supabase）
 
-Render 上で PostgreSQL インスタンスを作成し、**Internal Database URL** を控えます。
-無料プランは作成から90日で失効するため、**イベント期間中（8/28まで）は問題ありませんが、期限は把握しておいてください。**
+DB は **Supabase の無料プラン**を使います。Supabase のプロジェクトを作成し、**Pooler の接続文字列**（Connect → Connection string）を控えます。
+
+- 当初は Render の無料 PostgreSQL を使っていましたが、**作成から30日で失効し、その後削除される**ため（2026-10-23 に削除済みを確認）、Supabase に移行しました。削除されたDBは復元できません。
+- Supabase の無料プランは、**7日間アクセスがないと自動で停止（Paused）**します。停止した場合は、Supabase のダッシュボードで **Resume project** を押すと再開できます。再開するまでは、デプロイ時の `migrate` が接続できずに失敗します。
+- 接続文字列には**パスワードが含まれる**ため、リポジトリやドキュメントには書かず、Render の Environment にだけ設定します。
 
 ---
 
@@ -60,7 +65,7 @@ Render の Environment に以下を設定します。
 | --- | --- | --- |
 | `SECRET_KEY` | ランダムな文字列 | ローカルと別の値にする |
 | `DEBUG` | `False` | **本番で True にしない** |
-| `DATABASE_URL` | Internal Database URL | Render の DB からコピー |
+| `DATABASE_URL` | Supabase の接続文字列（Pooler） | Supabase の Connect からコピー。`render.yaml` では `sync: false`（手動設定） |
 | `ALLOWED_HOSTS` | `.onrender.com` | 入れ忘れると全リクエストが 400 |
 | `PYTHON_VERSION` | `3.12.4` | 明示しないと想定外のバージョンが使われる。開発環境（`.python-version`）と揃える |
 
