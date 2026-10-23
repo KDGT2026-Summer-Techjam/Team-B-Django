@@ -394,9 +394,9 @@ class EventPageTests(TestCase):
             "event-member-count",
             "event-member-list",
             "event-join-area",
-            "event-joined-message",
             "event-name-input",
             "event-join-btn",
+            "event-cancel-join-btn",
             "event-error",
         ):
             with self.subTest(element_id=element_id):
@@ -1723,7 +1723,8 @@ class PublicIdCollisionTests(TestCase):
     def test_create_event_api_returns_error_when_public_id_cannot_be_issued(self):
         payload = {
             "title": "ぶどう狩り",
-            "event_date": "2026-10-01",
+            # APIは過去の日付を拒否するため、固定日付ではなく、常に未来になる日付を使う
+            "event_date": future_date_str(10, 1),
             "location": "新潟県南魚沼市",
             "organizer_name": "鈴木",
         }
@@ -1748,7 +1749,8 @@ class PublicIdCollisionTests(TestCase):
     def test_create_event_api_succeeds_when_a_retry_frees_the_public_id(self):
         payload = {
             "title": "ぶどう狩り",
-            "event_date": "2026-10-01",
+            # APIは過去の日付を拒否するため、固定日付ではなく、常に未来になる日付を使う
+            "event_date": future_date_str(10, 1),
             "location": "新潟県南魚沼市",
             "organizer_name": "鈴木",
         }
