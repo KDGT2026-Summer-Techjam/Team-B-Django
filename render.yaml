@@ -1,8 +1,6 @@
-databases:
-  - name: seasonhub-db
-    plan: free
-    region: singapore
-
+# DB は Render の無料 PostgreSQL（作成から30日で失効）をやめ、Supabase を使う。
+# このためこのファイルには databases を定義しない。DATABASE_URL は Render の
+# ダッシュボードで手動設定する（docs/deploy.md 参照）。
 services:
   - type: web
     name: seasonhub-web
@@ -21,6 +19,4 @@ services:
       - key: ALLOWED_HOSTS
         value: .onrender.com
       - key: DATABASE_URL
-        fromDatabase:
-          name: seasonhub-db
-          property: connectionString
+        sync: false
