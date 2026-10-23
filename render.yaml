@@ -10,8 +10,9 @@ services:
     buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
     startCommand: "gunicorn config.wsgi:application"
     envVars:
+      # 本番は 3.12 系の最新パッチに更新する（開発環境の .python-version は 3.12.4 のまま。docs/deploy.md 参照）
       - key: PYTHON_VERSION
-        value: 3.12.4
+        value: 3.12.15
       - key: SECRET_KEY
         generateValue: true
       - key: DEBUG

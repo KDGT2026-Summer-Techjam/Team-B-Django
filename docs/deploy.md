@@ -67,7 +67,14 @@ Render の Environment に以下を設定します。
 | `DEBUG` | `False` | **本番で True にしない** |
 | `DATABASE_URL` | Supabase の接続文字列（Pooler） | Supabase の Connect からコピー。`render.yaml` では `sync: false`（手動設定） |
 | `ALLOWED_HOSTS` | `.onrender.com` | 入れ忘れると全リクエストが 400 |
-| `PYTHON_VERSION` | `3.12.4` | 明示しないと想定外のバージョンが使われる。開発環境（`.python-version`）と揃える |
+| `PYTHON_VERSION` | `3.12.15` | 明示しないと想定外のバージョンが使われる。**同じ 3.12 系**で、`.python-version`（3.12.4）より優先される（下記参照） |
+
+> **本番と開発環境のPythonバージョンについて（2026-10-23）**
+> 本番は、3.12 系のセキュリティ更新に合わせて **3.12.15** にしています。開発環境（`.python-version`）は **3.12.4 のまま**です。
+> pyenv の一覧に 3.12.15 がまだ無く、`.python-version` を変えると、メンバー全員の pyenv がエラーになるためです。
+> pyenv が 3.12.15 に対応したら、`.python-version` と `docs/pyenv.md`・`docs/setup.md` の 3.12.4 も、まとめて更新します。
+> Render では、環境変数 `PYTHON_VERSION` が `.python-version` より優先されます。
+> また、`render.yaml` を変えても、Blueprint の同期をしない限り、Render の環境変数は変わりません。**`PYTHON_VERSION` を変えたときは、Render の Environment も同じ値に更新してください。**
 
 `SECRET_KEY` の生成:
 
