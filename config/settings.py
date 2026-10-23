@@ -19,6 +19,29 @@ DEBUG = os.environ.get("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
 
+# `python manage.py test` で実行しているか（下の STORAGES と同じ判定）
+TESTING = "test" in sys.argv
+
+# 本番（DEBUG=False）のときだけ有効にするHTTPS・Cookieのセキュリティ設定。
+# ローカル開発（DEBUG=True、http://localhost）と、テスト（http://testserver）には影響しない。
+# `python manage.py check --deploy` の警告（W004 / W008 / W016）への対応。
+# HTTPSの判定に使う SECURE_PROXY_SSL_HEADER は、下の「Render のリバースプロキシ」の項で設定している。
+if not DEBUG and not TESTING:
+    # HTTPでのアクセスを、HTTPSへリダイレクトする。
+    SECURE_SSL_REDIRECT = True
+    # ログイン状態（セッション）とCSRFトークンのCookieを、HTTPS経由でのみ送る。
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # ブラウザに「このサイトは一定期間HTTPSでのみ接続する」と覚えさせる（HSTS）。
+    # 一度設定すると、期間内はブラウザがHTTPで接続できなくなるため、まず1時間から始め、
+    # 問題がないことを確認してから段階的に延ばす（最終的には1年 = 31536000 を目安にする）。
+    SECURE_HSTS_SECONDS = 3600
+    # このサイト（seasonhub-web.onrender.com）にサブドメインはなく、すべてHTTPSで配信されるため問題ない（W005）。
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    # W021（HSTSプリロードリストへの登録）は、自分で所有するドメインだけが対象。
+    # *.onrender.com は登録できないため、意図的に無効にする。独自ドメインを使うようになったら見直す。
+    SILENCED_SYSTEM_CHECKS = ["security.W021"]
+
 
 # Application definition
 
