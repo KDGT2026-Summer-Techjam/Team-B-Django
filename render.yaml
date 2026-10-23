@@ -1,8 +1,6 @@
-databases:
-  - name: seasonhub-db
-    plan: free
-    region: singapore
-
+# DB は Render の無料 PostgreSQL（作成から30日で失効）をやめ、Supabase を使う。
+# このためこのファイルには databases を定義しない。DATABASE_URL は Render の
+# ダッシュボードで手動設定する（docs/deploy.md 参照）。
 services:
   - type: web
     name: seasonhub-web
@@ -12,8 +10,9 @@ services:
     buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
     startCommand: "gunicorn config.wsgi:application"
     envVars:
+      # 本番は 3.12 系の最新パッチに更新する（開発環境の .python-version は 3.12.4 のまま。docs/deploy.md 参照）
       - key: PYTHON_VERSION
-        value: 3.12.4
+        value: 3.12.15
       - key: SECRET_KEY
         generateValue: true
       - key: DEBUG
@@ -21,6 +20,4 @@ services:
       - key: ALLOWED_HOSTS
         value: .onrender.com
       - key: DATABASE_URL
-        fromDatabase:
-          name: seasonhub-db
-          property: connectionString
+        sync: false
